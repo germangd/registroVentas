@@ -205,20 +205,23 @@ async function loadHistorial() {
   try {
     const filas = await fetchSheet(VENTAS_SHEET);
     // fila 0 = encabezado
-    const data = filas.slice(1).reverse();
+    const data = filas.slice(1).filter(r => r[0]).reverse();
     if (!data.length) { loadEl.textContent = 'Sin ventas registradas.'; return; }
-    tbodyEl.innerHTML = data.map(r => `
+    // r[0]=fecha r[1]=codigo r[2]=desc r[3]=precio r[4]=cantidad r[5]=pago r[6]=turno r[7]=responsable
+    tbodyEl.innerHTML = data.map(r => {
+      const subtotal = (parseFloat(r[3]||0)) * (parseFloat(r[4]||0));
+      return `
       <tr>
         <td>${r[0]||''}</td>
         <td style="font-family:monospace;font-size:12px">${r[1]||''}</td>
         <td>${r[2]||''}</td>
         <td>$${parseFloat(r[3]||0).toLocaleString('es-AR')}</td>
         <td>${r[4]||''}</td>
-        <td style="font-weight:600">$${parseFloat(r[5]||0).toLocaleString('es-AR')}</td>
+        <td style="font-weight:600">$${subtotal.toLocaleString('es-AR')}</td>
         <td>${badgeTurno(r[6]||'')}</td>
         <td>${r[7]||''}</td>
-        <td>${badgePago(r[8]||'')}</td>
-      </tr>`).join('');
+        <td>${badgePago(r[5]||'')}</td>
+      </tr>`;}).join('');
     loadEl.style.display = 'none';
     wrapEl.style.display = 'block';
   } catch(e) {
@@ -276,9 +279,11 @@ async function loadResumen() {
     const data  = filas.slice(1);
     if (!data.length) { loadEl.textContent = 'Sin datos.'; return; }
 
+    // r[3]=precio r[4]=cantidad => subtotal = r[3]*r[4]
+    const subtotalFn = r => (parseFloat(r[3])||0) * (parseFloat(r[4])||0);
     const hoy   = new Date().toLocaleDateString('es-AR');
-    const total = data.reduce((s, r) => s + (parseFloat(r[5])||0), 0);
-    const hoyT  = data.filter(r => r[0] === hoy).reduce((s, r) => s + (parseFloat(r[5])||0), 0);
+    const total = data.reduce((s, r) => s + subtotalFn(r), 0);
+    const hoyT  = data.filter(r => r[0] === hoy).reduce((s, r) => s + subtotalFn(r), 0);
 
     document.getElementById('m-total' ).textContent = '$' + Math.round(total).toLocaleString('es-AR');
     document.getElementById('m-trans' ).textContent = data.length;
@@ -287,8 +292,9 @@ async function loadResumen() {
 
     const pagos = {}, resps = {};
     data.forEach(r => {
-      const p  = r[8]||'sin dato'; pagos[p]  = pagos[p]  || { m:0, n:0 }; pagos[p].m  += parseFloat(r[5])||0; pagos[p].n++;
-      const rp = r[7]||'sin dato'; resps[rp] = resps[rp] || { m:0, n:0 }; resps[rp].m += parseFloat(r[5])||0; resps[rp].n++;
+      const sub = subtotalFn(r);
+      const p  = r[5]||'sin dato'; pagos[p]  = pagos[p]  || { m:0, n:0 }; pagos[p].m  += sub; pagos[p].n++;
+      const rp = r[7]||'sin dato'; resps[rp] = resps[rp] || { m:0, n:0 }; resps[rp].m += sub; resps[rp].n++;
     });
 
     document.getElementById('tbody-pago').innerHTML = Object.entries(pagos)
