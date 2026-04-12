@@ -92,3 +92,5 @@ codigo_apps_script.gs → pegá esto en Apps Script
 LEEME.txt             → esta guía
 
 ══════════════════════════════════════════════════════
+comando install:
+npx plugins add vercel/vercel-plugin
