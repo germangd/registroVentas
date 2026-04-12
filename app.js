@@ -1,52 +1,47 @@
-// ─────────────────────────────────────────────────────────
-//  CONFIGURACIÓN — completá estos valores en config.js
-// ─────────────────────────────────────────────────────────
-// Se leen desde window.APP_CONFIG que define config.js
-const SHEET_ID     = window.APP_CONFIG?.SHEET_ID     || 'TU_SHEET_ID_AQUI';
-const API_KEY      = window.APP_CONFIG?.API_KEY       || 'TU_API_KEY_AQUI';
-const SCRIPT_URL   = window.APP_CONFIG?.SCRIPT_URL    || 'TU_SCRIPT_URL_AQUI';
+const SHEET_ID     = window.APP_CONFIG?.SHEET_ID     || '';
+const API_KEY      = window.APP_CONFIG?.API_KEY       || '';
+const SCRIPT_URL   = window.APP_CONFIG?.SCRIPT_URL    || '';
 const VENTAS_SHEET = 'Respuestas formulario';
 const INV_SHEET    = 'Inventario';
 
-// ─────────────────────────────────────────────────────────
-//  ESTADO DE LA GRILLA
-// ─────────────────────────────────────────────────────────
 let rows = [];
 let nextId = 1;
 let inventarioDB = [];
 
-// ─────────────────────────────────────────────────────────
-//  INICIALIZACIÓN
-// ─────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   addRow();
-  checkConnection();
+  preloadInventario();
 });
 
-function checkConnection() {
-  const dot = document.getElementById('status-dot');
-  if (SHEET_ID === 'TU_SHEET_ID_AQUI') {
-    dot.classList.add('offline');
-    dot.title = 'No configurado';
+// ── Precarga inventario al iniciar para el autocompletado ──
+async function preloadInventario() {
+  try {
+    const data = await fetchSheet(INV_SHEET);
+    // fila 0 = "INVENTARIO" (título), fila 1 = encabezados, fila 2+ = datos
+    const filas = data.slice(2);
+    inventarioDB = filas.map(r => ({
+      codigo: String(r[0] || '').trim(),
+      desc:   String(r[1] || '').trim(),
+      stock:  parseFloat(r[2] || 0),
+      precio: 100
+    }));
+  } catch(e) {
+    console.warn('No se pudo precargar inventario:', e);
   }
 }
 
-// ─────────────────────────────────────────────────────────
-//  NAVEGACIÓN
-// ─────────────────────────────────────────────────────────
+// ── Navegación ──
 function showTab(tab, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('tab-' + tab).classList.add('active');
-  if (tab === 'historial')   loadHistorial();
-  if (tab === 'inventario')  loadInventario();
-  if (tab === 'resumen')     loadResumen();
+  if (tab === 'historial')  loadHistorial();
+  if (tab === 'inventario') loadInventario();
+  if (tab === 'resumen')    loadResumen();
 }
 
-// ─────────────────────────────────────────────────────────
-//  GRILLA ESTILO EXCEL
-// ─────────────────────────────────────────────────────────
+// ── Grilla estilo Excel ──
 function addRow() {
   const id = nextId++;
   rows.push({ id, codigo: '', desc: '', precio: '', cantidad: '' });
@@ -72,7 +67,7 @@ function onCodigoInput(id) {
   if (prod) {
     row.desc   = prod.desc;
     row.precio = prod.precio || 100;
-    document.getElementById('desc-' + id).value   = prod.desc;
+    document.getElementById('desc-'   + id).value = prod.desc;
     document.getElementById('precio-' + id).value = prod.precio || 100;
     setTimeout(() => document.getElementById('cant-' + id).focus(), 20);
   }
@@ -99,20 +94,18 @@ function onCantidadInput(id) {
 
 function onCantidadKey(id, e) {
   if ((e.key === 'Enter' || e.key === 'Tab') && getRow(id).codigo && getRow(id).cantidad) {
-    const last = rows[rows.length - 1];
-    if (last.id === id) {
+    if (rows[rows.length - 1].id === id) {
       e.preventDefault();
       addRow();
-      const newId = rows[rows.length - 1].id;
-      setTimeout(() => document.getElementById('cod-' + newId).focus(), 40);
+      setTimeout(() => document.getElementById('cod-' + rows[rows.length-1].id).focus(), 40);
     }
   }
 }
 
 function updateSubtotal(id) {
-  const row  = getRow(id);
-  const sub  = (parseFloat(row.precio) || 0) * (parseFloat(row.cantidad) || 0);
-  const el   = document.getElementById('sub-' + id);
+  const row = getRow(id);
+  const sub = (parseFloat(row.precio) || 0) * (parseFloat(row.cantidad) || 0);
+  const el  = document.getElementById('sub-' + id);
   if (el) el.textContent = sub > 0 ? '$' + sub.toLocaleString('es-AR') : '—';
   updateTotal();
 }
@@ -141,9 +134,7 @@ function renderGrid() {
   }).join('');
 }
 
-// ─────────────────────────────────────────────────────────
-//  GUARDAR VENTA → Google Sheets via Apps Script
-// ─────────────────────────────────────────────────────────
+// ── Guardar venta ──
 async function guardarVenta() {
   const pago        = document.getElementById('pago').value;
   const turno       = document.getElementById('turno').value;
@@ -163,12 +154,12 @@ async function guardarVenta() {
   const fecha = new Date().toLocaleDateString('es-AR');
   const payload = items.map(item => ({
     fecha,
-    codigo:       item.codigo,
-    descripcion:  item.desc,
-    precio:       parseFloat(item.precio),
-    cantidad:     parseFloat(item.cantidad),
-    subtotal:     parseFloat(item.precio) * parseFloat(item.cantidad),
-    formaPago:    pago,
+    codigo:      item.codigo,
+    descripcion: item.desc,
+    precio:      parseFloat(item.precio),
+    cantidad:    parseFloat(item.cantidad),
+    subtotal:    parseFloat(item.precio) * parseFloat(item.cantidad),
+    formaPago:   pago,
     turno,
     responsable
   }));
@@ -176,18 +167,16 @@ async function guardarVenta() {
   try {
     const res = await fetch(SCRIPT_URL, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      mode:    'no-cors',       // ← necesario para Apps Script desde dominios externos
+      headers: { 'Content-Type': 'text/plain' },
       body:    JSON.stringify({ action: 'addVentas', ventas: payload })
     });
-    const data = await res.json();
-    if (data.status === 'ok') {
-      showSuccess();
-      rows = []; nextId = 1; addRow();
-      ['pago','turno','responsable'].forEach(id => document.getElementById(id).value = '');
-      updateTotal();
-    } else {
-      showError('Error al guardar: ' + (data.message || 'intenta de nuevo.'));
-    }
+    // con no-cors no podemos leer la respuesta, asumimos éxito si no hay excepción
+    showSuccess();
+    rows = []; nextId = 1; addRow();
+    ['pago','turno','responsable'].forEach(id => document.getElementById(id).value = '');
+    updateTotal();
+    await preloadInventario();
   } catch (err) {
     showError('No se pudo conectar. Verificá tu conexión a internet.');
   }
@@ -196,12 +185,11 @@ async function guardarVenta() {
   btn.textContent = 'Registrar venta';
 }
 
-// ─────────────────────────────────────────────────────────
-//  LEER DATOS DE GOOGLE SHEETS (via API pública)
-// ─────────────────────────────────────────────────────────
+// ── Leer datos de Google Sheets ──
 async function fetchSheet(sheetName) {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
   const res  = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
   const data = await res.json();
   return data.values || [];
 }
@@ -210,12 +198,15 @@ async function loadHistorial() {
   const loadEl  = document.getElementById('loading-historial');
   const wrapEl  = document.getElementById('wrap-historial');
   const tbodyEl = document.getElementById('tbody-historial');
-  loadEl.style.display = 'block'; wrapEl.style.display = 'none';
+  loadEl.style.display = 'block';
+  loadEl.textContent   = 'Cargando...';
+  wrapEl.style.display = 'none';
 
   try {
-    const rows = await fetchSheet(VENTAS_SHEET);
-    if (rows.length < 2) { loadEl.textContent = 'Sin ventas registradas.'; return; }
-    const data = rows.slice(1).reverse();
+    const filas = await fetchSheet(VENTAS_SHEET);
+    // fila 0 = encabezado
+    const data = filas.slice(1).reverse();
+    if (!data.length) { loadEl.textContent = 'Sin ventas registradas.'; return; }
     tbodyEl.innerHTML = data.map(r => `
       <tr>
         <td>${r[0]||''}</td>
@@ -228,7 +219,8 @@ async function loadHistorial() {
         <td>${r[7]||''}</td>
         <td>${badgePago(r[8]||'')}</td>
       </tr>`).join('');
-    loadEl.style.display = 'none'; wrapEl.style.display = 'block';
+    loadEl.style.display = 'none';
+    wrapEl.style.display = 'block';
   } catch(e) {
     loadEl.textContent = 'Error al cargar. Verificá la configuración.';
   }
@@ -238,22 +230,37 @@ async function loadInventario() {
   const loadEl  = document.getElementById('loading-inventario');
   const wrapEl  = document.getElementById('wrap-inventario');
   const tbodyEl = document.getElementById('tbody-inventario');
-  loadEl.style.display = 'block'; wrapEl.style.display = 'none';
+  loadEl.style.display = 'block';
+  loadEl.textContent   = 'Cargando...';
+  wrapEl.style.display = 'none';
 
   try {
-    const rows = await fetchSheet(INV_SHEET);
-    if (rows.length < 2) { loadEl.textContent = 'Sin datos de inventario.'; return; }
-    inventarioDB = rows.slice(1).map(r => ({
-      codigo: r[0]||'', desc: r[1]||'', stock: parseFloat(r[2]||0), precio: parseFloat(r[3]||100)
+    const filas = await fetchSheet(INV_SHEET);
+    // fila 0 = "INVENTARIO" (título), fila 1 = encabezados, fila 2+ = datos
+    const data = filas.slice(2);
+    if (!data.length) { loadEl.textContent = 'Sin datos de inventario.'; return; }
+
+    inventarioDB = data.map(r => ({
+      codigo: String(r[0]||'').trim(),
+      desc:   String(r[1]||'').trim(),
+      stock:  parseFloat(r[2]||0),
+      precio: 100
     }));
+
     tbodyEl.innerHTML = inventarioDB.map(p => `
       <tr>
         <td style="font-family:monospace;font-size:12px">${p.codigo}</td>
         <td>${p.desc}</td>
         <td class="right" style="font-weight:600">${p.stock}</td>
-        <td class="center">${p.stock <= 3 ? '<span class="badge b-low">STOCK BAJO</span>' : '<span class="badge b-ok">OK</span>'}</td>
+        <td class="center">${p.stock <= 3
+          ? '<span class="badge b-low">STOCK BAJO</span>'
+          : p.stock <= 8
+            ? '<span class="badge b-cig">STOCK MEDIO</span>'
+            : '<span class="badge b-ok">OK</span>'}</td>
       </tr>`).join('');
-    loadEl.style.display = 'none'; wrapEl.style.display = 'block';
+
+    loadEl.style.display = 'none';
+    wrapEl.style.display = 'block';
   } catch(e) {
     loadEl.textContent = 'Error al cargar inventario.';
   }
@@ -262,33 +269,35 @@ async function loadInventario() {
 async function loadResumen() {
   const loadEl = document.getElementById('loading-resumen');
   loadEl.style.display = 'block';
+  loadEl.textContent   = 'Cargando...';
 
   try {
-    const rows = await fetchSheet(VENTAS_SHEET);
-    if (rows.length < 2) { loadEl.textContent = 'Sin datos.'; return; }
-    const data  = rows.slice(1);
+    const filas = await fetchSheet(VENTAS_SHEET);
+    const data  = filas.slice(1);
+    if (!data.length) { loadEl.textContent = 'Sin datos.'; return; }
+
     const hoy   = new Date().toLocaleDateString('es-AR');
-    const total = data.reduce((s,r)=>s+(parseFloat(r[5])||0), 0);
-    const hoyT  = data.filter(r=>r[0]===hoy).reduce((s,r)=>s+(parseFloat(r[5])||0), 0);
+    const total = data.reduce((s, r) => s + (parseFloat(r[5])||0), 0);
+    const hoyT  = data.filter(r => r[0] === hoy).reduce((s, r) => s + (parseFloat(r[5])||0), 0);
 
     document.getElementById('m-total' ).textContent = '$' + Math.round(total).toLocaleString('es-AR');
     document.getElementById('m-trans' ).textContent = data.length;
     document.getElementById('m-hoy'   ).textContent = '$' + Math.round(hoyT).toLocaleString('es-AR');
-    document.getElementById('m-ticket').textContent = '$' + (data.length ? Math.round(total/data.length).toLocaleString('es-AR') : 0);
+    document.getElementById('m-ticket').textContent = '$' + (data.length ? Math.round(total / data.length).toLocaleString('es-AR') : 0);
 
     const pagos = {}, resps = {};
     data.forEach(r => {
-      const p = r[8]||''; pagos[p] = pagos[p]||{m:0,n:0}; pagos[p].m += parseFloat(r[5])||0; pagos[p].n++;
-      const rp= r[7]||''; resps[rp]= resps[rp]||{m:0,n:0}; resps[rp].m+= parseFloat(r[5])||0; resps[rp].n++;
+      const p  = r[8]||'sin dato'; pagos[p]  = pagos[p]  || { m:0, n:0 }; pagos[p].m  += parseFloat(r[5])||0; pagos[p].n++;
+      const rp = r[7]||'sin dato'; resps[rp] = resps[rp] || { m:0, n:0 }; resps[rp].m += parseFloat(r[5])||0; resps[rp].n++;
     });
 
     document.getElementById('tbody-pago').innerHTML = Object.entries(pagos)
-      .sort((a,b)=>b[1].m-a[1].m)
-      .map(([k,v])=>`<tr><td>${badgePago(k)}</td><td style="font-weight:600">$${Math.round(v.m).toLocaleString('es-AR')}</td><td>${v.n}</td></tr>`).join('');
+      .sort((a,b) => b[1].m - a[1].m)
+      .map(([k,v]) => `<tr><td>${badgePago(k)}</td><td style="font-weight:600">$${Math.round(v.m).toLocaleString('es-AR')}</td><td>${v.n}</td></tr>`).join('');
 
     document.getElementById('tbody-resp').innerHTML = Object.entries(resps)
-      .sort((a,b)=>b[1].m-a[1].m)
-      .map(([k,v])=>`<tr><td style="font-weight:600">${k}</td><td>$${Math.round(v.m).toLocaleString('es-AR')}</td><td>${v.n}</td></tr>`).join('');
+      .sort((a,b) => b[1].m - a[1].m)
+      .map(([k,v]) => `<tr><td style="font-weight:600">${k}</td><td>$${Math.round(v.m).toLocaleString('es-AR')}</td><td>${v.n}</td></tr>`).join('');
 
     loadEl.style.display = 'none';
     document.getElementById('table-pago').style.display = 'table';
@@ -298,9 +307,7 @@ async function loadResumen() {
   }
 }
 
-// ─────────────────────────────────────────────────────────
-//  HELPERS
-// ─────────────────────────────────────────────────────────
+// ── Helpers ──
 function badgePago(p) {
   const cls = p === 'EFECTIVO' ? 'b-ef' : p === 'TRANSFERENCIA' ? 'b-tr' : 'b-cig';
   return `<span class="badge ${cls}">${p}</span>`;
@@ -316,7 +323,8 @@ function showSuccess() {
 }
 function showError(msg) {
   const el = document.getElementById('error-msg');
-  el.textContent = msg; el.style.display = 'block';
+  el.textContent = msg;
+  el.style.display = 'block';
 }
 function hideMessages() {
   document.getElementById('success-msg').style.display = 'none';
