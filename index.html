@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro de Ventas</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div class="header-title">
+        <div class="logo-dot"></div>
+        <span>Registro de ventas</span>
+      </div>
+      <div class="status-dot" id="status-dot" title="Conectado"></div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" onclick="showTab('nueva', this)">Nueva venta</button>
+    <button class="tab" onclick="showTab('historial', this)">Historial</button>
+    <button class="tab" onclick="showTab('inventario', this)">Inventario</button>
+    <button class="tab" onclick="showTab('resumen', this)">Resumen</button>
+  </nav>
+
+  <main>
+
+    <!-- ── NUEVA VENTA ─────────────────────────────── -->
+    <section id="tab-nueva" class="section active">
+      <div class="card">
+        <div class="card-title">Productos de la venta</div>
+        <p class="hint">Completá cada fila. Al ingresar la cantidad aparece una nueva fila automáticamente.</p>
+
+        <div class="grid-wrap">
+          <div class="grid-head">
+            <span>Código</span>
+            <span>Descripción</span>
+            <span>Precio</span>
+            <span>Cantidad</span>
+            <span class="right">Subtotal</span>
+            <span></span>
+          </div>
+          <div id="grid-body"></div>
+          <div class="total-bar">
+            <span class="total-label">Total:</span>
+            <strong id="total-valor">$0</strong>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="section-label">Datos de la venta</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Forma de pago</label>
+            <select id="pago">
+              <option value="">Seleccionar...</option>
+              <option>EFECTIVO</option>
+              <option>TRANSFERENCIA</option>
+              <option>CIGARRILLOS EFECT.</option>
+              <option>CIGARRILLOS MP</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Turno</label>
+            <select id="turno">
+              <option value="">Seleccionar...</option>
+              <option>MAÑANA</option>
+              <option>TARDE</option>
+              <option>NOCHE</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Responsable</label>
+            <select id="responsable">
+              <option value="">Seleccionar...</option>
+              <option>CLEVER</option>
+              <option>BELEN</option>
+              <option>IRIS</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-primary" id="btn-guardar" onclick="guardarVenta()">
+          Registrar venta
+        </button>
+        <div class="success-msg" id="success-msg">¡Venta registrada correctamente!</div>
+        <div class="error-msg" id="error-msg"></div>
+      </div>
+    </section>
+
+    <!-- ── HISTORIAL ───────────────────────────────── -->
+    <section id="tab-historial" class="section">
+      <div class="card">
+        <div class="card-title">Historial de ventas</div>
+        <div class="loading" id="loading-historial">Cargando...</div>
+        <div class="table-wrap" id="wrap-historial" style="display:none">
+          <table>
+            <thead><tr>
+              <th>Fecha</th><th>Código</th><th>Descripción</th>
+              <th>Precio</th><th>Cant.</th><th>Subtotal</th>
+              <th>Turno</th><th>Responsable</th><th>Pago</th>
+            </tr></thead>
+            <tbody id="tbody-historial"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── INVENTARIO ──────────────────────────────── -->
+    <section id="tab-inventario" class="section">
+      <div class="card">
+        <div class="card-title">Inventario actual</div>
+        <div class="loading" id="loading-inventario">Cargando...</div>
+        <div class="table-wrap" id="wrap-inventario" style="display:none">
+          <table>
+            <thead><tr>
+              <th>Código</th><th>Descripción</th>
+              <th class="right">Stock</th><th class="center">Estado</th>
+            </tr></thead>
+            <tbody id="tbody-inventario"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── RESUMEN ─────────────────────────────────── -->
+    <section id="tab-resumen" class="section">
+      <div class="metrics" id="metrics">
+        <div class="metric"><div class="metric-label">Total ventas</div><div class="metric-value" id="m-total">—</div></div>
+        <div class="metric"><div class="metric-label">Transacciones</div><div class="metric-value" id="m-trans">—</div></div>
+        <div class="metric"><div class="metric-label">Ventas hoy</div><div class="metric-value" id="m-hoy">—</div></div>
+        <div class="metric"><div class="metric-label">Ticket promedio</div><div class="metric-value" id="m-ticket">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Por forma de pago</div>
+        <div class="loading" id="loading-resumen">Cargando...</div>
+        <table id="table-pago" style="display:none">
+          <thead><tr><th>Forma de pago</th><th>Monto ($)</th><th>Transacciones</th></tr></thead>
+          <tbody id="tbody-pago"></tbody>
+        </table>
+      </div>
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title">Por responsable</div>
+        <table id="table-resp" style="display:none">
+          <thead><tr><th>Responsable</th><th>Monto ($)</th><th>Transacciones</th></tr></thead>
+          <tbody id="tbody-resp"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

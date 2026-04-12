@@ -1,0 +1,324 @@
+// ─────────────────────────────────────────────────────────
+//  CONFIGURACIÓN — completá estos valores en config.js
+// ─────────────────────────────────────────────────────────
+// Se leen desde window.APP_CONFIG que define config.js
+const SHEET_ID     = window.APP_CONFIG?.SHEET_ID     || 'TU_SHEET_ID_AQUI';
+const API_KEY      = window.APP_CONFIG?.API_KEY       || 'TU_API_KEY_AQUI';
+const SCRIPT_URL   = window.APP_CONFIG?.SCRIPT_URL    || 'TU_SCRIPT_URL_AQUI';
+const VENTAS_SHEET = 'Respuestas formulario';
+const INV_SHEET    = 'Inventario';
+
+// ─────────────────────────────────────────────────────────
+//  ESTADO DE LA GRILLA
+// ─────────────────────────────────────────────────────────
+let rows = [];
+let nextId = 1;
+let inventarioDB = [];
+
+// ─────────────────────────────────────────────────────────
+//  INICIALIZACIÓN
+// ─────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  addRow();
+  checkConnection();
+});
+
+function checkConnection() {
+  const dot = document.getElementById('status-dot');
+  if (SHEET_ID === 'TU_SHEET_ID_AQUI') {
+    dot.classList.add('offline');
+    dot.title = 'No configurado';
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+//  NAVEGACIÓN
+// ─────────────────────────────────────────────────────────
+function showTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'historial')   loadHistorial();
+  if (tab === 'inventario')  loadInventario();
+  if (tab === 'resumen')     loadResumen();
+}
+
+// ─────────────────────────────────────────────────────────
+//  GRILLA ESTILO EXCEL
+// ─────────────────────────────────────────────────────────
+function addRow() {
+  const id = nextId++;
+  rows.push({ id, codigo: '', desc: '', precio: '', cantidad: '' });
+  renderGrid();
+}
+
+function removeRow(id) {
+  if (rows.length <= 1) {
+    rows[0] = { id: rows[0].id, codigo: '', desc: '', precio: '', cantidad: '' };
+  } else {
+    rows = rows.filter(r => r.id !== id);
+  }
+  renderGrid();
+  updateTotal();
+}
+
+function getRow(id) { return rows.find(r => r.id === id); }
+
+function onCodigoInput(id) {
+  const row = getRow(id);
+  row.codigo = document.getElementById('cod-' + id).value.trim();
+  const prod = inventarioDB.find(p => p.codigo === row.codigo);
+  if (prod) {
+    row.desc   = prod.desc;
+    row.precio = prod.precio || 100;
+    document.getElementById('desc-' + id).value   = prod.desc;
+    document.getElementById('precio-' + id).value = prod.precio || 100;
+    setTimeout(() => document.getElementById('cant-' + id).focus(), 20);
+  }
+}
+
+function onDescInput(id)   { getRow(id).desc   = document.getElementById('desc-'   + id).value; }
+function onPrecioInput(id) {
+  getRow(id).precio = document.getElementById('precio-' + id).value;
+  updateSubtotal(id);
+}
+
+function onCantidadInput(id) {
+  const row = getRow(id);
+  row.cantidad = document.getElementById('cant-' + id).value;
+  updateSubtotal(id);
+  const last = rows[rows.length - 1];
+  if (last.id === id && row.codigo && row.cantidad) {
+    addRow();
+    const newId = rows[rows.length - 1].id;
+    setTimeout(() => document.getElementById('cod-' + newId).focus(), 40);
+  }
+  updateTotal();
+}
+
+function onCantidadKey(id, e) {
+  if ((e.key === 'Enter' || e.key === 'Tab') && getRow(id).codigo && getRow(id).cantidad) {
+    const last = rows[rows.length - 1];
+    if (last.id === id) {
+      e.preventDefault();
+      addRow();
+      const newId = rows[rows.length - 1].id;
+      setTimeout(() => document.getElementById('cod-' + newId).focus(), 40);
+    }
+  }
+}
+
+function updateSubtotal(id) {
+  const row  = getRow(id);
+  const sub  = (parseFloat(row.precio) || 0) * (parseFloat(row.cantidad) || 0);
+  const el   = document.getElementById('sub-' + id);
+  if (el) el.textContent = sub > 0 ? '$' + sub.toLocaleString('es-AR') : '—';
+  updateTotal();
+}
+
+function updateTotal() {
+  const total = rows.reduce((s, r) => s + (parseFloat(r.precio)||0) * (parseFloat(r.cantidad)||0), 0);
+  document.getElementById('total-valor').textContent = '$' + total.toLocaleString('es-AR');
+}
+
+function renderGrid() {
+  const body = document.getElementById('grid-body');
+  body.innerHTML = rows.map(row => {
+    const isEmpty = !row.codigo && !row.desc && !row.precio && !row.cantidad;
+    const isLast  = rows[rows.length - 1].id === row.id;
+    const sub     = (parseFloat(row.precio)||0) * (parseFloat(row.cantidad)||0);
+    return `
+      <div class="grid-row ${isLast && isEmpty ? 'empty-row' : ''}">
+        <div class="gcell"><input id="cod-${row.id}"    type="text"   value="${row.codigo}"   placeholder="Código"      oninput="onCodigoInput(${row.id})"></div>
+        <div class="gcell"><input id="desc-${row.id}"   type="text"   value="${row.desc}"     placeholder="Descripción" oninput="onDescInput(${row.id})"></div>
+        <div class="gcell"><input id="precio-${row.id}" type="number" value="${row.precio}"   placeholder="$"           oninput="onPrecioInput(${row.id})"></div>
+        <div class="gcell"><input id="cant-${row.id}"   type="number" value="${row.cantidad}" placeholder="0"
+          oninput="onCantidadInput(${row.id})" onkeydown="onCantidadKey(${row.id}, event)"></div>
+        <div class="gcell-sub" id="sub-${row.id}">${sub > 0 ? '$' + sub.toLocaleString('es-AR') : '—'}</div>
+        <div class="gcell"><button class="del-btn" onclick="removeRow(${row.id})" title="Quitar">×</button></div>
+      </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────
+//  GUARDAR VENTA → Google Sheets via Apps Script
+// ─────────────────────────────────────────────────────────
+async function guardarVenta() {
+  const pago        = document.getElementById('pago').value;
+  const turno       = document.getElementById('turno').value;
+  const responsable = document.getElementById('responsable').value;
+  const items       = rows.filter(r => r.codigo && r.precio && r.cantidad);
+
+  if (!items.length || !pago || !turno || !responsable) {
+    showError('Completá todos los campos y agregá al menos un producto.');
+    return;
+  }
+
+  const btn = document.getElementById('btn-guardar');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+  hideMessages();
+
+  const fecha = new Date().toLocaleDateString('es-AR');
+  const payload = items.map(item => ({
+    fecha,
+    codigo:       item.codigo,
+    descripcion:  item.desc,
+    precio:       parseFloat(item.precio),
+    cantidad:     parseFloat(item.cantidad),
+    subtotal:     parseFloat(item.precio) * parseFloat(item.cantidad),
+    formaPago:    pago,
+    turno,
+    responsable
+  }));
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'addVentas', ventas: payload })
+    });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      showSuccess();
+      rows = []; nextId = 1; addRow();
+      ['pago','turno','responsable'].forEach(id => document.getElementById(id).value = '');
+      updateTotal();
+    } else {
+      showError('Error al guardar: ' + (data.message || 'intenta de nuevo.'));
+    }
+  } catch (err) {
+    showError('No se pudo conectar. Verificá tu conexión a internet.');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Registrar venta';
+}
+
+// ─────────────────────────────────────────────────────────
+//  LEER DATOS DE GOOGLE SHEETS (via API pública)
+// ─────────────────────────────────────────────────────────
+async function fetchSheet(sheetName) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}`;
+  const res  = await fetch(url);
+  const data = await res.json();
+  return data.values || [];
+}
+
+async function loadHistorial() {
+  const loadEl  = document.getElementById('loading-historial');
+  const wrapEl  = document.getElementById('wrap-historial');
+  const tbodyEl = document.getElementById('tbody-historial');
+  loadEl.style.display = 'block'; wrapEl.style.display = 'none';
+
+  try {
+    const rows = await fetchSheet(VENTAS_SHEET);
+    if (rows.length < 2) { loadEl.textContent = 'Sin ventas registradas.'; return; }
+    const data = rows.slice(1).reverse();
+    tbodyEl.innerHTML = data.map(r => `
+      <tr>
+        <td>${r[0]||''}</td>
+        <td style="font-family:monospace;font-size:12px">${r[1]||''}</td>
+        <td>${r[2]||''}</td>
+        <td>$${parseFloat(r[3]||0).toLocaleString('es-AR')}</td>
+        <td>${r[4]||''}</td>
+        <td style="font-weight:600">$${parseFloat(r[5]||0).toLocaleString('es-AR')}</td>
+        <td>${badgeTurno(r[6]||'')}</td>
+        <td>${r[7]||''}</td>
+        <td>${badgePago(r[8]||'')}</td>
+      </tr>`).join('');
+    loadEl.style.display = 'none'; wrapEl.style.display = 'block';
+  } catch(e) {
+    loadEl.textContent = 'Error al cargar. Verificá la configuración.';
+  }
+}
+
+async function loadInventario() {
+  const loadEl  = document.getElementById('loading-inventario');
+  const wrapEl  = document.getElementById('wrap-inventario');
+  const tbodyEl = document.getElementById('tbody-inventario');
+  loadEl.style.display = 'block'; wrapEl.style.display = 'none';
+
+  try {
+    const rows = await fetchSheet(INV_SHEET);
+    if (rows.length < 2) { loadEl.textContent = 'Sin datos de inventario.'; return; }
+    inventarioDB = rows.slice(1).map(r => ({
+      codigo: r[0]||'', desc: r[1]||'', stock: parseFloat(r[2]||0), precio: parseFloat(r[3]||100)
+    }));
+    tbodyEl.innerHTML = inventarioDB.map(p => `
+      <tr>
+        <td style="font-family:monospace;font-size:12px">${p.codigo}</td>
+        <td>${p.desc}</td>
+        <td class="right" style="font-weight:600">${p.stock}</td>
+        <td class="center">${p.stock <= 3 ? '<span class="badge b-low">STOCK BAJO</span>' : '<span class="badge b-ok">OK</span>'}</td>
+      </tr>`).join('');
+    loadEl.style.display = 'none'; wrapEl.style.display = 'block';
+  } catch(e) {
+    loadEl.textContent = 'Error al cargar inventario.';
+  }
+}
+
+async function loadResumen() {
+  const loadEl = document.getElementById('loading-resumen');
+  loadEl.style.display = 'block';
+
+  try {
+    const rows = await fetchSheet(VENTAS_SHEET);
+    if (rows.length < 2) { loadEl.textContent = 'Sin datos.'; return; }
+    const data  = rows.slice(1);
+    const hoy   = new Date().toLocaleDateString('es-AR');
+    const total = data.reduce((s,r)=>s+(parseFloat(r[5])||0), 0);
+    const hoyT  = data.filter(r=>r[0]===hoy).reduce((s,r)=>s+(parseFloat(r[5])||0), 0);
+
+    document.getElementById('m-total' ).textContent = '$' + Math.round(total).toLocaleString('es-AR');
+    document.getElementById('m-trans' ).textContent = data.length;
+    document.getElementById('m-hoy'   ).textContent = '$' + Math.round(hoyT).toLocaleString('es-AR');
+    document.getElementById('m-ticket').textContent = '$' + (data.length ? Math.round(total/data.length).toLocaleString('es-AR') : 0);
+
+    const pagos = {}, resps = {};
+    data.forEach(r => {
+      const p = r[8]||''; pagos[p] = pagos[p]||{m:0,n:0}; pagos[p].m += parseFloat(r[5])||0; pagos[p].n++;
+      const rp= r[7]||''; resps[rp]= resps[rp]||{m:0,n:0}; resps[rp].m+= parseFloat(r[5])||0; resps[rp].n++;
+    });
+
+    document.getElementById('tbody-pago').innerHTML = Object.entries(pagos)
+      .sort((a,b)=>b[1].m-a[1].m)
+      .map(([k,v])=>`<tr><td>${badgePago(k)}</td><td style="font-weight:600">$${Math.round(v.m).toLocaleString('es-AR')}</td><td>${v.n}</td></tr>`).join('');
+
+    document.getElementById('tbody-resp').innerHTML = Object.entries(resps)
+      .sort((a,b)=>b[1].m-a[1].m)
+      .map(([k,v])=>`<tr><td style="font-weight:600">${k}</td><td>$${Math.round(v.m).toLocaleString('es-AR')}</td><td>${v.n}</td></tr>`).join('');
+
+    loadEl.style.display = 'none';
+    document.getElementById('table-pago').style.display = 'table';
+    document.getElementById('table-resp').style.display = 'table';
+  } catch(e) {
+    loadEl.textContent = 'Error al cargar resumen.';
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+//  HELPERS
+// ─────────────────────────────────────────────────────────
+function badgePago(p) {
+  const cls = p === 'EFECTIVO' ? 'b-ef' : p === 'TRANSFERENCIA' ? 'b-tr' : 'b-cig';
+  return `<span class="badge ${cls}">${p}</span>`;
+}
+function badgeTurno(t) {
+  const cls = t === 'MAÑANA' ? 'b-turno-m' : t === 'TARDE' ? 'b-turno-t' : 'b-turno-n';
+  return `<span class="badge ${cls}">${t}</span>`;
+}
+function showSuccess() {
+  const el = document.getElementById('success-msg');
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 4000);
+}
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg; el.style.display = 'block';
+}
+function hideMessages() {
+  document.getElementById('success-msg').style.display = 'none';
+  document.getElementById('error-msg').style.display   = 'none';
+}

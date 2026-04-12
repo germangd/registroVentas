@@ -1,0 +1,94 @@
+══════════════════════════════════════════════════════
+  REGISTRO DE VENTAS — GUÍA DE INSTALACIÓN
+══════════════════════════════════════════════════════
+
+Estos son los 4 pasos para tener tu app funcionando.
+Tardás aprox. 20 minutos la primera vez.
+
+──────────────────────────────────────────────────────
+PASO 1 — Preparar el Google Sheet
+──────────────────────────────────────────────────────
+1. Subí el archivo REGISTRO_VENTAS_con_formulas.xlsx
+   a Google Drive y abrilo con Google Sheets.
+
+2. Copiá el ID de la URL. Ejemplo:
+   https://docs.google.com/spreadsheets/d/ESTE_ES_EL_ID/edit
+   Guardalo, lo vas a necesitar en el Paso 3.
+
+https://docs.google.com/spreadsheets/d/1Qbj03cGXZrDFdDy4Ol7NGRivPfJ1b9-6dRyX0Isv-v0/edit?gid=1186750048#gid=1186750048
+id implementacion: AKfycbwgNRUycjZ1sxmQ8r_6nuGT1dHSqUHKXW3wrQqzY-NFoZ98gAwFf33DOlSq6YQ82fN5Kg
+3. Hacé la hoja pública para lectura:
+url: https://script.google.com/macros/s/AKfycbwgNRUycjZ1sxmQ8r_6nuGT1dHSqUHKXW3wrQqzY-NFoZ98gAwFf33DOlSq6YQ82fN5Kg/exec
+   - Archivo → Compartir → Publicar en la web
+   - Elegí "Toda la hoja" y "Valores separados por comas"
+   - Click en "Publicar" y confirmá.
+
+──────────────────────────────────────────────────────
+PASO 2 — Crear el Apps Script (el "guardador")
+──────────────────────────────────────────────────────
+1. En tu Google Sheet, andá a:
+   Extensiones → Apps Script
+
+2. Borrá todo lo que haya en el editor y pegá el
+   contenido del archivo: codigo_apps_script.gs
+
+3. Guardá (Ctrl+S o el ícono del diskette).
+
+4. Click en "Implementar" → "Nueva implementación"
+   - Tipo: Aplicación web
+   - Ejecutar como: Yo
+   - Quién tiene acceso: Cualquier persona
+   - Click en "Implementar"
+   - Copiá la URL que aparece (empieza con https://script...)
+   Guardala, es tu SCRIPT_URL.
+
+──────────────────────────────────────────────────────
+PASO 3 — Obtener la API Key de Google
+──────────────────────────────────────────────────────
+1. Andá a: https://console.cloud.google.com
+   (usá tu cuenta de Google)
+
+2. Creá un proyecto nuevo (nombre: "ventas-app" o cualquiera)
+
+3. En el menú izquierdo: APIs y servicios → Biblioteca
+   Buscá "Google Sheets API" → Habilitá
+
+4. APIs y servicios → Credenciales → Crear credencial
+   → Clave de API
+   Copiá la clave que aparece. Es tu API_KEY.
+
+AIzaSyAGb1yrGmQQ5Yx60q55V41lavM0gHirRAc
+──────────────────────────────────────────────────────
+PASO 4 — Completar config.js y publicar en Vercel
+──────────────────────────────────────────────────────
+1. Abrí el archivo config.js con el Bloc de notas
+   y completá los 3 valores:
+
+   SHEET_ID:   el ID del Paso 1
+   API_KEY:    la clave del Paso 3
+   SCRIPT_URL: la URL del Paso 2
+
+2. Guardá config.js.
+
+3. Andá a https://vercel.com y creá una cuenta gratis
+   con tu cuenta de Google.
+
+4. Click en "Add New → Project" → "Upload folder"
+   Subí esta carpeta completa (los 4 archivos).
+
+5. Click en "Deploy". En 1 minuto te da tu URL,
+   algo como: mis-ventas.vercel.app
+
+6. ¡Compartí esa URL con tu equipo!
+
+──────────────────────────────────────────────────────
+ARCHIVOS INCLUIDOS
+──────────────────────────────────────────────────────
+index.html            → estructura de la app
+style.css             → diseño visual
+app.js                → lógica de la app
+config.js             → TUS credenciales (editá esto)
+codigo_apps_script.gs → pegá esto en Apps Script
+LEEME.txt             → esta guía
+
+══════════════════════════════════════════════════════
