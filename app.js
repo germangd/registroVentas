@@ -83,21 +83,18 @@ function onCantidadInput(id) {
   const row = getRow(id);
   row.cantidad = document.getElementById('cant-' + id).value;
   updateSubtotal(id);
-  const last = rows[rows.length - 1];
-  if (last.id === id && row.codigo && row.cantidad) {
-    addRow();
-    const newId = rows[rows.length - 1].id;
-    setTimeout(() => document.getElementById('cod-' + newId).focus(), 40);
-  }
   updateTotal();
 }
 
 function onCantidadKey(id, e) {
-  if ((e.key === 'Enter' || e.key === 'Tab') && getRow(id).codigo && getRow(id).cantidad) {
-    if (rows[rows.length - 1].id === id) {
-      e.preventDefault();
-      addRow();
-      setTimeout(() => document.getElementById('cod-' + rows[rows.length-1].id).focus(), 40);
+  if (e.key === 'Enter' || e.key === 'Tab') {
+    const row = getRow(id);
+    if (row.codigo && row.cantidad) {
+      if (rows[rows.length - 1].id === id) {
+        e.preventDefault();
+        addRow();
+        setTimeout(() => document.getElementById('cod-' + rows[rows.length-1].id).focus(), 40);
+      }
     }
   }
 }
@@ -172,7 +169,7 @@ async function guardarVenta() {
       body:    JSON.stringify({ action: 'addVentas', ventas: payload })
     });
     // con no-cors no podemos leer la respuesta, asumimos éxito si no hay excepción
-    showSuccess();
+    showTicket(payload, pago, turno, responsable);
     rows = []; nextId = 1; addRow();
     ['pago','turno','responsable'].forEach(id => document.getElementById(id).value = '');
     updateTotal();
@@ -322,7 +319,36 @@ function badgeTurno(t) {
   const cls = t === 'MAÑANA' ? 'b-turno-m' : t === 'TARDE' ? 'b-turno-t' : 'b-turno-n';
   return `<span class="badge ${cls}">${t}</span>`;
 }
-function showSuccess() {
+function showTicket(items, pago, turno, responsable) {
+  const fecha = new Date().toLocaleDateString('es-AR');
+  const hora  = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+
+  document.getElementById('ticket-fecha').textContent = `${fecha}  ${hora}`;
+
+  document.getElementById('ticket-meta').innerHTML = `
+    <span class="badge b-turno-${turno==='MAÑANA'?'m':turno==='TARDE'?'t':'n'}">${turno}</span>
+    <span class="badge ${pago==='EFECTIVO'?'b-ef':pago==='TRANSFERENCIA'?'b-tr':'b-cig'}">${pago}</span>
+    <span class="ticket-resp">${responsable}</span>`;
+
+  const total = items.reduce((s, i) => s + i.subtotal, 0);
+
+  document.getElementById('ticket-items').innerHTML = items.map(i => `
+    <div class="ticket-item">
+      <span class="ticket-item-desc">${i.descripcion || i.codigo}</span>
+      <span class="right">${i.cantidad}</span>
+      <span class="right">$${i.subtotal.toLocaleString('es-AR')}</span>
+    </div>`).join('');
+
+  document.getElementById('ticket-total').textContent = '$' + total.toLocaleString('es-AR');
+  document.getElementById('modal-ticket').classList.add('open');
+}
+
+function cerrarTicket(e) {
+  if (e && e.target !== document.getElementById('modal-ticket')) return;
+  document.getElementById('modal-ticket').classList.remove('open');
+}
+
+
   const el = document.getElementById('success-msg');
   el.style.display = 'block';
   setTimeout(() => el.style.display = 'none', 4000);

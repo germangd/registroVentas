@@ -151,6 +151,29 @@
 
   </main>
 
+  <!-- ── MODAL TICKET ───────────────────────────────── -->
+  <div class="modal-overlay" id="modal-ticket" onclick="cerrarTicket(event)">
+    <div class="modal-box">
+      <div class="ticket-header">
+        <div class="ticket-check">✓</div>
+        <div class="ticket-title">Venta registrada</div>
+        <div class="ticket-subtitle" id="ticket-fecha"></div>
+      </div>
+      <div class="ticket-meta" id="ticket-meta"></div>
+      <div class="ticket-items-header">
+        <span>Producto</span>
+        <span class="right">Cant.</span>
+        <span class="right">Subtotal</span>
+      </div>
+      <div id="ticket-items"></div>
+      <div class="ticket-total-bar">
+        <span>TOTAL</span>
+        <span id="ticket-total"></span>
+      </div>
+      <button class="btn-cerrar" onclick="cerrarTicket()">Cerrar y nueva venta</button>
+    </div>
+  </div>
+
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
