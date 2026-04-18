@@ -438,57 +438,49 @@ const COLORES_TURNO = ['#1e40af','#92400e','#4c1d95'];
 const chartInstances = {};
 
 function renderChart(canvasId, grupos, colores) {
-  // Obtener todas las fechas únicas ordenadas
-  const todasFechas = [...new Set(
-    Object.values(grupos).flatMap(f => Object.keys(f))
-  )].sort((a, b) => parseFechaAR(a) - parseFechaAR(b));
-
-  if (!todasFechas.length) return;
-
   const keys = Object.keys(grupos);
-  const datasets = keys.map((key, i) => ({
-    label: key,
-    data: todasFechas.map(f => Math.round(grupos[key][f]?.m || 0)),
-    backgroundColor: colores[i % colores.length] + 'cc',
-    borderColor:     colores[i % colores.length],
-    borderWidth: 1,
-    borderRadius: 4,
-  }));
+  if (!keys.length) return;
+
+  // Para torta: total por categoría (suma de todos los días)
+  const totales = keys.map(key =>
+    Math.round(Object.values(grupos[key]).reduce((s, v) => s + v.m, 0))
+  );
 
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
 
-  // Destruir instancia previa si existe
   if (chartInstances[canvasId]) {
     chartInstances[canvasId].destroy();
   }
 
   chartInstances[canvasId] = new Chart(canvas, {
-    type: 'bar',
-    data: { labels: todasFechas, datasets },
+    type: 'doughnut',
+    data: {
+      labels: keys,
+      datasets: [{
+        data: totales,
+        backgroundColor: colores.slice(0, keys.length).map(c => c + 'dd'),
+        borderColor:     colores.slice(0, keys.length),
+        borderWidth: 2,
+        hoverOffset: 8,
+      }]
+    },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      cutout: '55%',
       plugins: {
-        legend: { position: 'bottom', labels: { font: { size: 12 }, boxWidth: 14 } },
+        legend: {
+          position: 'bottom',
+          labels: { font: { size: 12 }, boxWidth: 14, padding: 16 }
+        },
         tooltip: {
           callbacks: {
-            label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString('es-AR')}`
-          }
-        }
-      },
-      scales: {
-        x: {
-          stacked: false,
-          grid: { display: false },
-          ticks: { font: { size: 11 }, maxRotation: 45 }
-        },
-        y: {
-          beginAtZero: true,
-          grid: { color: '#e4e6ef' },
-          ticks: {
-            font: { size: 11 },
-            callback: v => '$' + v.toLocaleString('es-AR')
+            label: ctx => {
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct   = total ? Math.round(ctx.parsed / total * 100) : 0;
+              return ` $${ctx.parsed.toLocaleString('es-AR')}  (${pct}%)`;
+            }
           }
         }
       }
