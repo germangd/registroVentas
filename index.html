@@ -126,27 +126,41 @@
 
     <!-- ── RESUMEN ─────────────────────────────────── -->
     <section id="tab-resumen" class="section">
+
+      <div class="card resumen-filtros">
+        <div class="filtro-rapido">
+          <button class="fbtn active" onclick="setFiltroRapido('hoy',this)">Hoy</button>
+          <button class="fbtn" onclick="setFiltroRapido('semana',this)">Esta semana</button>
+          <button class="fbtn" onclick="setFiltroRapido('mes',this)">Este mes</button>
+          <button class="fbtn" onclick="setFiltroRapido('todo',this)">Todo</button>
+        </div>
+        <div class="filtro-rango">
+          <label>Desde</label>
+          <input type="date" id="fecha-desde" onchange="setFiltroRango()">
+          <label>Hasta</label>
+          <input type="date" id="fecha-hasta" onchange="setFiltroRango()">
+        </div>
+      </div>
+
       <div class="metrics" id="metrics">
-        <div class="metric"><div class="metric-label">Total ventas</div><div class="metric-value" id="m-total">—</div></div>
+        <div class="metric"><div class="metric-label">Total período</div><div class="metric-value" id="m-total">—</div></div>
         <div class="metric"><div class="metric-label">Transacciones</div><div class="metric-value" id="m-trans">—</div></div>
-        <div class="metric"><div class="metric-label">Ventas hoy</div><div class="metric-value" id="m-hoy">—</div></div>
+        <div class="metric"><div class="metric-label">Días con ventas</div><div class="metric-value" id="m-dias">—</div></div>
         <div class="metric"><div class="metric-label">Ticket promedio</div><div class="metric-value" id="m-ticket">—</div></div>
       </div>
-      <div class="card">
-        <div class="card-title">Por forma de pago</div>
-        <div class="loading" id="loading-resumen">Cargando...</div>
-        <table id="table-pago" style="display:none">
-          <thead><tr><th>Forma de pago</th><th>Monto ($)</th><th>Transacciones</th></tr></thead>
-          <tbody id="tbody-pago"></tbody>
-        </table>
-      </div>
-      <div class="card" style="margin-top:1rem">
+
+      <div class="loading" id="loading-resumen" style="display:none">Cargando...</div>
+
+      <div class="card" id="card-resp">
         <div class="card-title">Por responsable</div>
-        <table id="table-resp" style="display:none">
-          <thead><tr><th>Responsable</th><th>Monto ($)</th><th>Transacciones</th></tr></thead>
-          <tbody id="tbody-resp"></tbody>
-        </table>
+        <div id="grupos-resp"></div>
       </div>
+
+      <div class="card" style="margin-top:1rem" id="card-pago">
+        <div class="card-title">Por forma de pago</div>
+        <div id="grupos-pago"></div>
+      </div>
+
     </section>
 
   </main>

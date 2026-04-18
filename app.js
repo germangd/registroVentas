@@ -266,45 +266,173 @@ async function loadInventario() {
   }
 }
 
+// ── Resumen con filtros ──
+let resumenData = [];   // todos los datos crudos
+let filtroDesde = null;
+let filtroHasta = null;
+
+function parseFechaAR(str) {
+  // formato dd/mm/yyyy
+  const [d, m, y] = str.split('/');
+  return new Date(+y, +m - 1, +d);
+}
+
+function fechaToISO(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+function setFiltroRapido(tipo, btn) {
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  if (tipo === 'hoy') {
+    filtroDesde = filtroHasta = new Date(hoy);
+  } else if (tipo === 'semana') {
+    const lunes = new Date(hoy);
+    lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7));
+    filtroDesde = lunes; filtroHasta = new Date(hoy);
+  } else if (tipo === 'mes') {
+    filtroDesde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    filtroHasta = new Date(hoy);
+  } else {
+    filtroDesde = filtroHasta = null;
+  }
+  // Sincronizar inputs de fecha
+  document.getElementById('fecha-desde').value = filtroDesde ? fechaToISO(filtroDesde) : '';
+  document.getElementById('fecha-hasta').value = filtroHasta ? fechaToISO(filtroHasta) : '';
+  renderResumen();
+}
+
+function setFiltroRango() {
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  const d = document.getElementById('fecha-desde').value;
+  const h = document.getElementById('fecha-hasta').value;
+  filtroDesde = d ? new Date(d + 'T00:00:00') : null;
+  filtroHasta = h ? new Date(h + 'T23:59:59') : null;
+  renderResumen();
+}
+
+function filtrarDatos() {
+  if (!filtroDesde && !filtroHasta) return resumenData;
+  return resumenData.filter(r => {
+    const f = parseFechaAR(r[0] || '');
+    if (isNaN(f)) return false;
+    if (filtroDesde && f < filtroDesde) return false;
+    if (filtroHasta) {
+      const hasta = new Date(filtroHasta); hasta.setHours(23,59,59);
+      if (f > hasta) return false;
+    }
+    return true;
+  });
+}
+
+function renderResumen() {
+  const data = filtrarDatos();
+  const subtotalFn = r => (parseFloat(r[3])||0) * (parseFloat(r[4])||0);
+
+  const total = data.reduce((s, r) => s + subtotalFn(r), 0);
+  const dias  = new Set(data.map(r => r[0])).size;
+
+  document.getElementById('m-total' ).textContent = '$' + Math.round(total).toLocaleString('es-AR');
+  document.getElementById('m-trans' ).textContent = data.length;
+  document.getElementById('m-dias'  ).textContent = dias;
+  document.getElementById('m-ticket').textContent = '$' + (data.length ? Math.round(total / data.length).toLocaleString('es-AR') : 0);
+
+  // Agrupar por responsable
+  const porResp = {};
+  data.forEach(r => {
+    const key = r[7] || 'sin dato';
+    if (!porResp[key]) porResp[key] = {};
+    const fecha = r[0] || 'sin fecha';
+    if (!porResp[key][fecha]) porResp[key][fecha] = { m: 0, n: 0 };
+    porResp[key][fecha].m += subtotalFn(r);
+    porResp[key][fecha].n++;
+  });
+  document.getElementById('grupos-resp').innerHTML = renderGrupos(porResp, 'resp');
+
+  // Agrupar por forma de pago
+  const porPago = {};
+  data.forEach(r => {
+    const key = r[5] || 'sin dato';
+    if (!porPago[key]) porPago[key] = {};
+    const fecha = r[0] || 'sin fecha';
+    if (!porPago[key][fecha]) porPago[key][fecha] = { m: 0, n: 0 };
+    porPago[key][fecha].m += subtotalFn(r);
+    porPago[key][fecha].n++;
+  });
+  document.getElementById('grupos-pago').innerHTML = renderGrupos(porPago, 'pago');
+}
+
+function renderGrupos(grupos, prefix) {
+  return Object.entries(grupos)
+    .sort((a, b) => {
+      const sa = Object.values(a[1]).reduce((s,v) => s+v.m, 0);
+      const sb = Object.values(b[1]).reduce((s,v) => s+v.m, 0);
+      return sb - sa;
+    })
+    .map(([key, fechas], i) => {
+      const totalGrupo = Object.values(fechas).reduce((s,v) => s+v.m, 0);
+      const transGrupo = Object.values(fechas).reduce((s,v) => s+v.n, 0);
+      const uid = prefix + '-' + i;
+      const filas = Object.entries(fechas)
+        .sort((a, b) => {
+          const fa = parseFechaAR(a[0]), fb = parseFechaAR(b[0]);
+          return fb - fa;
+        })
+        .map(([fecha, v]) => `
+          <tr class="detalle-fila">
+            <td style="padding-left:28px;color:var(--text-muted)">${fecha}</td>
+            <td style="font-weight:600">$${Math.round(v.m).toLocaleString('es-AR')}</td>
+            <td>${v.n}</td>
+          </tr>`).join('');
+      return `
+        <div class="grupo-header" onclick="toggleGrupo('${uid}')">
+          <span class="grupo-nombre">${key}</span>
+          <span class="grupo-stats">
+            <strong>$${Math.round(totalGrupo).toLocaleString('es-AR')}</strong>
+            <span class="grupo-trans">${transGrupo} transacc.</span>
+          </span>
+          <span class="grupo-chevron" id="chev-${uid}">▸</span>
+        </div>
+        <div class="grupo-detalle" id="det-${uid}" style="display:none">
+          <table style="width:100%">
+            <thead><tr>
+              <th>Fecha</th><th>Monto</th><th>Transacc.</th>
+            </tr></thead>
+            <tbody>${filas}</tbody>
+          </table>
+        </div>`;
+    }).join('');
+}
+
+function toggleGrupo(uid) {
+  const det  = document.getElementById('det-'  + uid);
+  const chev = document.getElementById('chev-' + uid);
+  const open = det.style.display !== 'none';
+  det.style.display = open ? 'none' : 'block';
+  chev.textContent  = open ? '▸' : '▾';
+}
+
 async function loadResumen() {
   const loadEl = document.getElementById('loading-resumen');
   loadEl.style.display = 'block';
-  loadEl.textContent   = 'Cargando...';
+  document.getElementById('grupos-resp').innerHTML = '';
+  document.getElementById('grupos-pago').innerHTML = '';
 
   try {
     const filas = await fetchSheet(VENTAS_SHEET);
-    const data  = filas.slice(1);
-    if (!data.length) { loadEl.textContent = 'Sin datos.'; return; }
-
-    // r[3]=precio r[4]=cantidad => subtotal = r[3]*r[4]
-    const subtotalFn = r => (parseFloat(r[3])||0) * (parseFloat(r[4])||0);
-    const hoy   = new Date().toLocaleDateString('es-AR');
-    const total = data.reduce((s, r) => s + subtotalFn(r), 0);
-    const hoyT  = data.filter(r => r[0] === hoy).reduce((s, r) => s + subtotalFn(r), 0);
-
-    document.getElementById('m-total' ).textContent = '$' + Math.round(total).toLocaleString('es-AR');
-    document.getElementById('m-trans' ).textContent = data.length;
-    document.getElementById('m-hoy'   ).textContent = '$' + Math.round(hoyT).toLocaleString('es-AR');
-    document.getElementById('m-ticket').textContent = '$' + (data.length ? Math.round(total / data.length).toLocaleString('es-AR') : 0);
-
-    const pagos = {}, resps = {};
-    data.forEach(r => {
-      const sub = subtotalFn(r);
-      const p  = r[5]||'sin dato'; pagos[p]  = pagos[p]  || { m:0, n:0 }; pagos[p].m  += sub; pagos[p].n++;
-      const rp = r[7]||'sin dato'; resps[rp] = resps[rp] || { m:0, n:0 }; resps[rp].m += sub; resps[rp].n++;
-    });
-
-    document.getElementById('tbody-pago').innerHTML = Object.entries(pagos)
-      .sort((a,b) => b[1].m - a[1].m)
-      .map(([k,v]) => `<tr><td>${badgePago(k)}</td><td style="font-weight:600">$${Math.round(v.m).toLocaleString('es-AR')}</td><td>${v.n}</td></tr>`).join('');
-
-    document.getElementById('tbody-resp').innerHTML = Object.entries(resps)
-      .sort((a,b) => b[1].m - a[1].m)
-      .map(([k,v]) => `<tr><td style="font-weight:600">${k}</td><td>$${Math.round(v.m).toLocaleString('es-AR')}</td><td>${v.n}</td></tr>`).join('');
-
+    resumenData = filas.slice(1).filter(r => r[0]);
     loadEl.style.display = 'none';
-    document.getElementById('table-pago').style.display = 'table';
-    document.getElementById('table-resp').style.display = 'table';
+
+    // Aplicar filtro "Hoy" por defecto si es la primera vez
+    if (!filtroDesde && !filtroHasta) {
+      const hoy = new Date(); hoy.setHours(0,0,0,0);
+      filtroDesde = filtroHasta = new Date(hoy);
+      document.getElementById('fecha-desde').value = fechaToISO(hoy);
+      document.getElementById('fecha-hasta').value = fechaToISO(hoy);
+    }
+
+    renderResumen();
   } catch(e) {
     loadEl.textContent = 'Error al cargar resumen.';
   }

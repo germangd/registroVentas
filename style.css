@@ -108,7 +108,31 @@ th.center, td.center { text-align: center; }
 .b-turno-t { background: var(--warning-bg); color: var(--warning-text); }
 .b-turno-n { background: #f5f3ff;           color: #4c1d95; }
 
-/* MODAL TICKET */
+/* FILTROS RESUMEN */
+.resumen-filtros { margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
+.filtro-rapido { display: flex; gap: 8px; flex-wrap: wrap; }
+.fbtn { padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); color: var(--text-muted); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+.fbtn:hover { border-color: var(--accent); color: var(--accent); }
+.fbtn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.filtro-rango { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.filtro-rango label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+.filtro-rango input[type="date"] { padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; color: var(--text); background: var(--surface); }
+.filtro-rango input[type="date"]:focus { outline: none; border-color: var(--accent); }
+
+/* GRUPOS COLAPSABLES */
+.grupo-header { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: var(--radius-sm); cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.12s; }
+.grupo-header:hover { background: #f9fafb; }
+.grupo-header:last-of-type { border-bottom: none; }
+.grupo-nombre { font-weight: 600; font-size: 14px; flex: 1; }
+.grupo-stats { display: flex; align-items: center; gap: 10px; }
+.grupo-stats strong { color: var(--accent); font-size: 15px; }
+.grupo-trans { font-size: 12px; color: var(--text-muted); }
+.grupo-chevron { font-size: 13px; color: var(--text-muted); width: 14px; text-align: center; transition: transform 0.15s; }
+.grupo-detalle { border-bottom: 1px solid var(--border); background: #fafbff; }
+.grupo-detalle table { width: 100%; }
+.grupo-detalle tr.detalle-fila:hover td { background: #f0f4ff; }
+
+
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
 .modal-overlay.open { display: flex; }
 .modal-box { background: var(--surface); border-radius: 14px; width: 100%; max-width: 400px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.25); animation: slideUp 0.2s ease; }
