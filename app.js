@@ -11,6 +11,8 @@ let inventarioDB = [];
 window.addEventListener('DOMContentLoaded', () => {
   addRow();
   preloadInventario();
+  initFondo();
+  renderGradientesGrid();
 });
 
 // ── Precarga inventario al iniciar para el autocompletado ──
@@ -39,6 +41,7 @@ function showTab(tab, el) {
   if (tab === 'historial')  loadHistorial();
   if (tab === 'inventario') loadInventario();
   if (tab === 'resumen')    loadResumen();
+  if (tab === 'nueva')      applyFondoToSection();
 }
 
 // ── Grilla estilo Excel ──
@@ -246,6 +249,18 @@ async function loadInventario() {
       stock:  parseFloat(r[2]||0),
       precio: 100
     }));
+
+    // Stats de inventario
+    const total_items = inventarioDB.length;
+    const bajo = inventarioDB.filter(p => p.stock <= 3).length;
+    const medio = inventarioDB.filter(p => p.stock > 3 && p.stock <= 8).length;
+    const ok = inventarioDB.filter(p => p.stock > 8).length;
+    const statsEl = document.getElementById('inv-stats');
+    if (statsEl) statsEl.innerHTML = `
+      <div class="inv-stat inv-stat-total"><div class="inv-stat-n">${total_items}</div><div class="inv-stat-l">productos</div></div>
+      <div class="inv-stat inv-stat-ok"><div class="inv-stat-n">${ok}</div><div class="inv-stat-l">stock OK</div></div>
+      <div class="inv-stat inv-stat-medio"><div class="inv-stat-n">${medio}</div><div class="inv-stat-l">stock medio</div></div>
+      <div class="inv-stat inv-stat-bajo"><div class="inv-stat-n">${bajo}</div><div class="inv-stat-l">stock bajo</div></div>`;
 
     tbodyEl.innerHTML = inventarioDB.map(p => `
       <tr>
@@ -565,4 +580,102 @@ function showError(msg) {
 function hideMessages() {
   document.getElementById('success-msg').style.display = 'none';
   document.getElementById('error-msg').style.display   = 'none';
+}
+
+// ── Configuración de fondo ──
+const GRADIENTES = [
+  { id: 'g1',  label: 'Índigo',      value: 'linear-gradient(135deg,#e0e7ff 0%,#c7d2fe 100%)' },
+  { id: 'g2',  label: 'Menta',       value: 'linear-gradient(135deg,#d1fae5 0%,#a7f3d0 100%)' },
+  { id: 'g3',  label: 'Durazno',     value: 'linear-gradient(135deg,#fef3c7 0%,#fde68a 100%)' },
+  { id: 'g4',  label: 'Rosa',        value: 'linear-gradient(135deg,#fce7f3 0%,#fbcfe8 100%)' },
+  { id: 'g5',  label: 'Cielo',       value: 'linear-gradient(135deg,#e0f2fe 0%,#bae6fd 100%)' },
+  { id: 'g6',  label: 'Lavanda',     value: 'linear-gradient(135deg,#f3e8ff 0%,#e9d5ff 100%)' },
+  { id: 'g7',  label: 'Salmón',      value: 'linear-gradient(135deg,#fee2e2 0%,#fecaca 100%)' },
+  { id: 'g8',  label: 'Lima',        value: 'linear-gradient(135deg,#ecfccb 0%,#d9f99d 100%)' },
+  { id: 'g9',  label: 'Aurora',      value: 'linear-gradient(135deg,#fdf4ff 0%,#e0f2fe 50%,#d1fae5 100%)' },
+  { id: 'g10', label: 'Atardecer',   value: 'linear-gradient(135deg,#fef9c3 0%,#fde68a 40%,#fca5a5 100%)' },
+  { id: 'g11', label: 'Océano',      value: 'linear-gradient(135deg,#eff6ff 0%,#bfdbfe 50%,#c7d2fe 100%)' },
+  { id: 'g12', label: 'Sin fondo',   value: '' },
+];
+
+function renderGradientesGrid() {
+  const grid = document.getElementById('gradientes-grid');
+  if (!grid) return;
+  const actual = localStorage.getItem('fondo-value') || '';
+  grid.innerHTML = GRADIENTES.map(g => `
+    <div class="grad-item ${g.value === actual ? 'grad-active' : ''}"
+         onclick="setGradiente('${g.id}')"
+         title="${g.label}"
+         style="background:${g.value || '#f5f6fa'};border:2px solid ${g.value === actual ? '#4f46e5' : '#e4e6ef'}">
+      <span class="grad-label">${g.label}</span>
+    </div>`).join('');
+}
+
+function setGradiente(id) {
+  const g = GRADIENTES.find(x => x.id === id);
+  if (!g) return;
+  localStorage.setItem('fondo-type', 'gradient');
+  localStorage.setItem('fondo-value', g.value);
+  applyFondoToSection();
+  updatePreview();
+  renderGradientesGrid();
+}
+
+function uploadFondo(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    localStorage.setItem('fondo-type', 'image');
+    localStorage.setItem('fondo-value', `url("${e.target.result}")`);
+    applyFondoToSection();
+    updatePreview();
+    renderGradientesGrid();
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetFondo() {
+  localStorage.removeItem('fondo-type');
+  localStorage.removeItem('fondo-value');
+  applyFondoToSection();
+  updatePreview();
+  renderGradientesGrid();
+}
+
+function applyFondoToSection() {
+  const type  = localStorage.getItem('fondo-type')  || '';
+  const value = localStorage.getItem('fondo-value') || '';
+  const section = document.getElementById('tab-nueva');
+  if (!section) return;
+  if (!value) {
+    section.style.background = '';
+    section.style.backgroundSize = '';
+    return;
+  }
+  if (type === 'image') {
+    section.style.background = `${value} center/cover no-repeat`;
+  } else {
+    section.style.background = value;
+  }
+}
+
+function updatePreview() {
+  const type  = localStorage.getItem('fondo-type')  || '';
+  const value = localStorage.getItem('fondo-value') || '';
+  const preview = document.getElementById('fondo-preview');
+  if (!preview) return;
+  if (!value) {
+    preview.style.background = '#f5f6fa';
+    preview.style.backgroundSize = '';
+  } else if (type === 'image') {
+    preview.style.background = `${value} center/cover no-repeat`;
+  } else {
+    preview.style.background = value;
+  }
+}
+
+function initFondo() {
+  applyFondoToSection();
+  updatePreview();
 }
