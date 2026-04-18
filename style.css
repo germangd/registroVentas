@@ -108,6 +108,9 @@ th.center, td.center { text-align: center; }
 .b-turno-t { background: var(--warning-bg); color: var(--warning-text); }
 .b-turno-n { background: #f5f3ff;           color: #4c1d95; }
 
+/* GRÁFICOS */
+.chart-wrap { position: relative; height: 260px; width: 100%; margin-top: 8px; }
+
 /* FILTROS RESUMEN */
 .resumen-filtros { margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
 .filtro-rapido { display: flex; gap: 8px; flex-wrap: wrap; }

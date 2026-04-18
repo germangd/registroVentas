@@ -361,6 +361,23 @@ function renderResumen() {
     porPago[key][fecha].n++;
   });
   document.getElementById('grupos-pago').innerHTML = renderGrupos(porPago, 'pago');
+
+  // Agrupar por turno
+  const porTurno = {};
+  data.forEach(r => {
+    const key = r[6] || 'sin dato';
+    if (!porTurno[key]) porTurno[key] = {};
+    const fecha = r[0] || 'sin fecha';
+    if (!porTurno[key][fecha]) porTurno[key][fecha] = { m: 0, n: 0 };
+    porTurno[key][fecha].m += subtotalFn(r);
+    porTurno[key][fecha].n++;
+  });
+  document.getElementById('grupos-turno').innerHTML = renderGrupos(porTurno, 'turno');
+
+  // Gráficos
+  renderChart('chart-resp',  porResp,  COLORES_RESP);
+  renderChart('chart-pago',  porPago,  COLORES_PAGO);
+  renderChart('chart-turno', porTurno, COLORES_TURNO);
 }
 
 function renderGrupos(grupos, prefix) {
@@ -411,6 +428,72 @@ function toggleGrupo(uid) {
   const open = det.style.display !== 'none';
   det.style.display = open ? 'none' : 'block';
   chev.textContent  = open ? '▸' : '▾';
+}
+
+// ── Paletas de colores para gráficos ──
+const COLORES_RESP  = ['#4f46e5','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6'];
+const COLORES_PAGO  = ['#1e40af','#065f46','#92400e','#7c3aed','#b45309'];
+const COLORES_TURNO = ['#1e40af','#92400e','#4c1d95'];
+
+const chartInstances = {};
+
+function renderChart(canvasId, grupos, colores) {
+  // Obtener todas las fechas únicas ordenadas
+  const todasFechas = [...new Set(
+    Object.values(grupos).flatMap(f => Object.keys(f))
+  )].sort((a, b) => parseFechaAR(a) - parseFechaAR(b));
+
+  if (!todasFechas.length) return;
+
+  const keys = Object.keys(grupos);
+  const datasets = keys.map((key, i) => ({
+    label: key,
+    data: todasFechas.map(f => Math.round(grupos[key][f]?.m || 0)),
+    backgroundColor: colores[i % colores.length] + 'cc',
+    borderColor:     colores[i % colores.length],
+    borderWidth: 1,
+    borderRadius: 4,
+  }));
+
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+
+  // Destruir instancia previa si existe
+  if (chartInstances[canvasId]) {
+    chartInstances[canvasId].destroy();
+  }
+
+  chartInstances[canvasId] = new Chart(canvas, {
+    type: 'bar',
+    data: { labels: todasFechas, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 12 }, boxWidth: 14 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString('es-AR')}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: false,
+          grid: { display: false },
+          ticks: { font: { size: 11 }, maxRotation: 45 }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: '#e4e6ef' },
+          ticks: {
+            font: { size: 11 },
+            callback: v => '$' + v.toLocaleString('es-AR')
+          }
+        }
+      }
+    }
+  });
 }
 
 async function loadResumen() {

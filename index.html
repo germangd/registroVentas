@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Registro de Ventas</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -159,6 +160,24 @@
       <div class="card" style="margin-top:1rem" id="card-pago">
         <div class="card-title">Por forma de pago</div>
         <div id="grupos-pago"></div>
+      </div>
+
+      <div class="card" style="margin-top:1rem" id="card-turno">
+        <div class="card-title">Por turno</div>
+        <div id="grupos-turno"></div>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title">Ventas por día — Responsable</div>
+        <div class="chart-wrap"><canvas id="chart-resp"></canvas></div>
+      </div>
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title">Ventas por día — Forma de pago</div>
+        <div class="chart-wrap"><canvas id="chart-pago"></canvas></div>
+      </div>
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title">Ventas por día — Turno</div>
+        <div class="chart-wrap"><canvas id="chart-turno"></canvas></div>
       </div>
 
     </section>
