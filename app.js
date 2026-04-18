@@ -349,6 +349,7 @@ function cerrarTicket(e) {
 }
 
 
+function showSuccess() {
   const el = document.getElementById('success-msg');
   el.style.display = 'block';
   setTimeout(() => el.style.display = 'none', 4000);
