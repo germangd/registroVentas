@@ -621,27 +621,29 @@ function setGradiente(id) {
 }
 
 function uploadFondo(event) {
-  const file = event.target.files[0];
+  const input = document.getElementById('img-input');
+  const file = input.files[0];
   if (!file) return;
+  const fileName = file.name;
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = function(e) {
     localStorage.setItem('fondo-type', 'image');
     localStorage.setItem('fondo-value', e.target.result);
     applyFondoToSection();
     updatePreview();
     renderGradientesGrid();
-    // Mostrar nombre del archivo subido
+    // Feedback visual
     const area = document.getElementById('upload-area');
     if (area) {
-      area.querySelector('.upload-text').textContent = '✓ ' + file.name;
+      area.querySelector('.upload-text').textContent = '✓ ' + fileName;
       area.querySelector('.upload-hint').textContent = 'Clic para cambiar la imagen';
       area.style.borderColor = '#059669';
       area.style.background = '#f0fdf4';
     }
-    // Resetear el input para poder volver a seleccionar
-    event.target.value = '';
   };
   reader.readAsDataURL(file);
+  // Resetear ANTES de leer, así el input queda libre inmediatamente
+  setTimeout(() => { input.value = ''; }, 100);
 }
 
 function resetFondo() {
