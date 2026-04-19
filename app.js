@@ -630,6 +630,8 @@ function uploadFondo(event) {
     applyFondoToSection();
     updatePreview();
     renderGradientesGrid();
+    // Resetear el input para permitir subir el mismo archivo u otro después
+    event.target.value = '';
   };
   reader.readAsDataURL(file);
 }
@@ -645,21 +647,18 @@ function resetFondo() {
 function applyFondoToSection() {
   const type  = localStorage.getItem('fondo-type')  || '';
   const value = localStorage.getItem('fondo-value') || '';
-  // Aplicar al main para que cubra toda la sección con altura real
-  const main = document.getElementById('main-content');
-  if (!main) return;
+  // Aplicar al body para cubrir toda la ventana
   if (!value) {
-    main.style.background = '';
-    main.style.backgroundSize = '';
-    main.style.backgroundAttachment = '';
+    document.body.style.background = '';
+    document.body.style.backgroundSize = '';
+    document.body.style.backgroundAttachment = '';
     return;
   }
   if (type === 'image') {
-    // value ya es la dataURL cruda, sin url()
-    main.style.background = `url("${value}") center/cover no-repeat fixed`;
+    document.body.style.background = `url("${value}") center/cover no-repeat fixed`;
   } else {
-    main.style.background = value;
-    main.style.backgroundAttachment = '';
+    document.body.style.background = value;
+    document.body.style.backgroundAttachment = '';
   }
 }
 
