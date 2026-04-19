@@ -191,8 +191,8 @@ th.center, td.center { text-align: center; }
 .upload-icon { font-size: 32px; margin-bottom: 8px; }
 .upload-text { font-weight: 700; color: #7c3aed; margin-bottom: 4px; }
 .upload-hint { font-size: 12px; color: var(--text-muted); }
-.fondo-preview { border-radius: var(--radius); height: 120px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); transition: background 0.3s; }
-.preview-card { background: #ffffffdd; border-radius: 10px; padding: 14px 20px; min-width: 200px; box-shadow: 0 4px 16px #0001; }
+.fondo-preview { border-radius: var(--radius); height: 130px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); transition: all 0.3s; overflow: hidden; position: relative; background-color: #f5f6fa; }
+.preview-card { background: #ffffffdd; border-radius: 10px; padding: 14px 20px; min-width: 180px; max-width: 80%; box-shadow: 0 4px 16px #0002; text-align: center; }
 .btn-reset { margin-top: 14px; padding: 9px 18px; background: #fef2f2; color: #991b1b; border: 1.5px solid #fca5a5; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
 .btn-reset:hover { background: #fee2e2; }
 

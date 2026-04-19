@@ -597,38 +597,49 @@ const GRADIENTES = [
   { id: 'g12', label: 'Sin fondo',   value: '' },
 ];
 
+// Estado de fondo en memoria (imagen) + localStorage (gradiente)
+let fondoImagenDataURL = null;
+
 function renderGradientesGrid() {
   const grid = document.getElementById('gradientes-grid');
   if (!grid) return;
-  const actual = localStorage.getItem('fondo-value') || '';
-  grid.innerHTML = GRADIENTES.map(g => `
-    <div class="grad-item ${g.value === actual ? 'grad-active' : ''}"
+  const actualGrad = localStorage.getItem('fondo-gradient') || '';
+  const tipoActual = fondoImagenDataURL ? 'image' : (actualGrad ? 'gradient' : '');
+  grid.innerHTML = GRADIENTES.map(g => {
+    const esActivo = tipoActual === 'gradient' && g.value === actualGrad;
+    return `<div class="grad-item ${esActivo ? 'grad-active' : ''}"
          onclick="setGradiente('${g.id}')"
          title="${g.label}"
-         style="background:${g.value || '#f5f6fa'};border:2px solid ${g.value === actual ? '#4f46e5' : '#e4e6ef'}">
+         style="background:${g.value || '#f5f6fa'};border:2px solid ${esActivo ? '#4f46e5' : '#e4e6ef'}">
       <span class="grad-label">${g.label}</span>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function setGradiente(id) {
   const g = GRADIENTES.find(x => x.id === id);
   if (!g) return;
-  localStorage.setItem('fondo-type', 'gradient');
-  localStorage.setItem('fondo-value', g.value);
+  fondoImagenDataURL = null; // limpiar imagen si había
+  if (g.value) {
+    localStorage.setItem('fondo-gradient', g.value);
+  } else {
+    localStorage.removeItem('fondo-gradient');
+  }
   applyFondoToSection();
   updatePreview();
   renderGradientesGrid();
+  resetUploadArea();
 }
 
 function uploadFondo(event) {
-  const input = document.getElementById('img-input');
+  const input = event.target;
+  if (!input.files || !input.files[0]) return;
   const file = input.files[0];
-  if (!file) return;
   const fileName = file.name;
   const reader = new FileReader();
   reader.onload = function(e) {
-    localStorage.setItem('fondo-type', 'image');
-    localStorage.setItem('fondo-value', e.target.result);
+    fondoImagenDataURL = e.target.result;
+    localStorage.removeItem('fondo-gradient'); // imagen tiene prioridad
     applyFondoToSection();
     updatePreview();
     renderGradientesGrid();
@@ -640,54 +651,69 @@ function uploadFondo(event) {
       area.style.borderColor = '#059669';
       area.style.background = '#f0fdf4';
     }
+    // Resetear input DESPUÉS de que onload terminó
+    input.value = '';
   };
   reader.readAsDataURL(file);
-  // Resetear ANTES de leer, así el input queda libre inmediatamente
-  setTimeout(() => { input.value = ''; }, 100);
+}
+
+function resetUploadArea() {
+  const area = document.getElementById('upload-area');
+  if (!area) return;
+  area.querySelector('.upload-text').textContent = 'Hacé clic para subir una foto';
+  area.querySelector('.upload-hint').textContent = 'JPG, PNG, WEBP — se guarda en tu navegador';
+  area.style.borderColor = '';
+  area.style.background = '';
 }
 
 function resetFondo() {
-  localStorage.removeItem('fondo-type');
-  localStorage.removeItem('fondo-value');
+  fondoImagenDataURL = null;
+  localStorage.removeItem('fondo-gradient');
   applyFondoToSection();
   updatePreview();
   renderGradientesGrid();
+  resetUploadArea();
 }
 
 function applyFondoToSection() {
-  const type  = localStorage.getItem('fondo-type')  || '';
-  const value = localStorage.getItem('fondo-value') || '';
-  // Aplicar al body para cubrir toda la ventana
-  if (!value) {
-    document.body.style.background = '';
-    document.body.style.backgroundSize = '';
-    document.body.style.backgroundAttachment = '';
-    return;
-  }
-  if (type === 'image') {
-    document.body.style.background = `url("${value}") center/cover no-repeat fixed`;
+  if (fondoImagenDataURL) {
+    document.body.style.backgroundImage = `url("${fondoImagenDataURL}")`;
+    document.body.style.backgroundSize = 'cover';
+    document.body.style.backgroundPosition = 'center';
+    document.body.style.backgroundAttachment = 'fixed';
+    document.body.style.backgroundRepeat = 'no-repeat';
+    document.body.style.backgroundColor = '';
   } else {
-    document.body.style.background = value;
+    const grad = localStorage.getItem('fondo-gradient') || '';
+    document.body.style.backgroundImage = grad || '';
+    document.body.style.backgroundSize = '';
+    document.body.style.backgroundPosition = '';
     document.body.style.backgroundAttachment = '';
+    document.body.style.backgroundRepeat = '';
+    document.body.style.backgroundColor = grad ? '' : '#f0f4ff';
   }
 }
 
 function updatePreview() {
-  const type  = localStorage.getItem('fondo-type')  || '';
-  const value = localStorage.getItem('fondo-value') || '';
   const preview = document.getElementById('fondo-preview');
   if (!preview) return;
-  if (!value) {
-    preview.style.background = '#f5f6fa';
-    preview.style.backgroundSize = '';
-  } else if (type === 'image') {
-    preview.style.background = `url("${value}") center/cover no-repeat`;
+  if (fondoImagenDataURL) {
+    preview.style.backgroundImage = `url("${fondoImagenDataURL}")`;
+    preview.style.backgroundSize = 'cover';
+    preview.style.backgroundPosition = 'center';
+    preview.style.backgroundRepeat = 'no-repeat';
   } else {
-    preview.style.background = value;
+    const grad = localStorage.getItem('fondo-gradient') || '';
+    preview.style.backgroundImage = grad || '';
+    preview.style.backgroundSize = '';
+    preview.style.backgroundPosition = '';
+    preview.style.backgroundRepeat = '';
+    preview.style.backgroundColor = grad ? '' : '#f5f6fa';
   }
 }
 
 function initFondo() {
+  // Solo restaurar gradiente desde localStorage (imagen no persiste — es demasiado grande)
   applyFondoToSection();
   updatePreview();
 }
