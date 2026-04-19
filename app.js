@@ -630,7 +630,15 @@ function uploadFondo(event) {
     applyFondoToSection();
     updatePreview();
     renderGradientesGrid();
-    // Resetear el input para permitir subir el mismo archivo u otro después
+    // Mostrar nombre del archivo subido
+    const area = document.getElementById('upload-area');
+    if (area) {
+      area.querySelector('.upload-text').textContent = '✓ ' + file.name;
+      area.querySelector('.upload-hint').textContent = 'Clic para cambiar la imagen';
+      area.style.borderColor = '#059669';
+      area.style.background = '#f0fdf4';
+    }
+    // Resetear el input para poder volver a seleccionar
     event.target.value = '';
   };
   reader.readAsDataURL(file);

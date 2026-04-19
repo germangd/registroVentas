@@ -220,12 +220,12 @@
 
         <div class="divider"></div>
         <div class="config-section-label">Imagen personalizada</div>
-        <div class="upload-area" id="upload-area" onclick="document.getElementById('img-input').click()">
+        <label class="upload-area" id="upload-area" for="img-input">
           <div class="upload-icon">🖼</div>
           <div class="upload-text">Hacé clic para subir una foto</div>
           <div class="upload-hint">JPG, PNG, WEBP — se guarda en tu navegador</div>
-          <input type="file" id="img-input" accept="image/*" style="display:none" onchange="uploadFondo(event)">
-        </div>
+        </label>
+        <input type="file" id="img-input" accept="image/*" style="display:none" onchange="uploadFondo(event)">
 
         <div class="divider"></div>
         <div class="config-section-label">Vista previa</div>
