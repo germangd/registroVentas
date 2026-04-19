@@ -631,31 +631,7 @@ function setGradiente(id) {
   resetUploadArea();
 }
 
-function uploadFondo(event) {
-  const input = event.target;
-  if (!input.files || !input.files[0]) return;
-  const file = input.files[0];
-  const fileName = file.name;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    fondoImagenDataURL = e.target.result;
-    localStorage.removeItem('fondo-gradient'); // imagen tiene prioridad
-    applyFondoToSection();
-    updatePreview();
-    renderGradientesGrid();
-    // Feedback visual
-    const area = document.getElementById('upload-area');
-    if (area) {
-      area.querySelector('.upload-text').textContent = '✓ ' + fileName;
-      area.querySelector('.upload-hint').textContent = 'Clic para cambiar la imagen';
-      area.style.borderColor = '#059669';
-      area.style.background = '#f0fdf4';
-    }
-    // Resetear input DESPUÉS de que onload terminó
-    input.value = '';
-  };
-  reader.readAsDataURL(file);
-}
+
 
 function resetUploadArea() {
   const area = document.getElementById('upload-area');
@@ -713,7 +689,33 @@ function updatePreview() {
 }
 
 function initFondo() {
-  // Solo restaurar gradiente desde localStorage (imagen no persiste — es demasiado grande)
+  // Adjuntar listener al input de imagen de forma confiable
+  const input = document.getElementById('img-input');
+  if (input) {
+    input.addEventListener('change', function() {
+      if (!this.files || !this.files[0]) return;
+      const file = this.files[0];
+      const fileName = file.name;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        fondoImagenDataURL = e.target.result;
+        localStorage.removeItem('fondo-gradient');
+        applyFondoToSection();
+        updatePreview();
+        renderGradientesGrid();
+        const area = document.getElementById('upload-area');
+        if (area) {
+          area.querySelector('.upload-text').textContent = '✓ ' + fileName;
+          area.querySelector('.upload-hint').textContent = 'Clic para cambiar la imagen';
+          area.style.borderColor = '#059669';
+          area.style.background = '#f0fdf4';
+        }
+        input.value = '';
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  // Restaurar gradiente desde localStorage
   applyFondoToSection();
   updatePreview();
 }

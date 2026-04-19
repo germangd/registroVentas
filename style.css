@@ -186,7 +186,7 @@ th.center, td.center { text-align: center; }
 .grad-item:hover { transform: translateY(-2px); box-shadow: 0 6px 16px #0002; }
 .grad-item.grad-active { box-shadow: 0 0 0 3px #7c3aed, 0 4px 14px #7c3aed40; transform: translateY(-2px); }
 .grad-label { font-size: 10px; font-weight: 700; color: #374151; background: #ffffffcc; border-radius: 4px; padding: 1px 5px; }
-.upload-area { border: 2px dashed #c4b5fd; border-radius: var(--radius); padding: 28px; text-align: center; cursor: pointer; transition: all 0.15s; background: #faf5ff; }
+.upload-area { display: block; width: 100%; border: 2px dashed #c4b5fd; border-radius: var(--radius); padding: 28px; text-align: center; cursor: pointer; transition: all 0.15s; background: #faf5ff; box-sizing: border-box; }
 .upload-area:hover { border-color: #7c3aed; background: #f3e8ff; }
 .upload-icon { font-size: 32px; margin-bottom: 8px; }
 .upload-text { font-weight: 700; color: #7c3aed; margin-bottom: 4px; }
