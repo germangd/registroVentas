@@ -41,7 +41,6 @@ function showTab(tab, el) {
   if (tab === 'historial')  loadHistorial();
   if (tab === 'inventario') loadInventario();
   if (tab === 'resumen')    loadResumen();
-  if (tab === 'nueva')      applyFondoToSection();
 }
 
 // ── Grilla estilo Excel ──
@@ -627,7 +626,7 @@ function uploadFondo(event) {
   const reader = new FileReader();
   reader.onload = e => {
     localStorage.setItem('fondo-type', 'image');
-    localStorage.setItem('fondo-value', `url("${e.target.result}")`);
+    localStorage.setItem('fondo-value', e.target.result);
     applyFondoToSection();
     updatePreview();
     renderGradientesGrid();
@@ -646,17 +645,21 @@ function resetFondo() {
 function applyFondoToSection() {
   const type  = localStorage.getItem('fondo-type')  || '';
   const value = localStorage.getItem('fondo-value') || '';
-  const section = document.getElementById('tab-nueva');
-  if (!section) return;
+  // Aplicar al main para que cubra toda la sección con altura real
+  const main = document.getElementById('main-content');
+  if (!main) return;
   if (!value) {
-    section.style.background = '';
-    section.style.backgroundSize = '';
+    main.style.background = '';
+    main.style.backgroundSize = '';
+    main.style.backgroundAttachment = '';
     return;
   }
   if (type === 'image') {
-    section.style.background = `${value} center/cover no-repeat`;
+    // value ya es la dataURL cruda, sin url()
+    main.style.background = `url("${value}") center/cover no-repeat fixed`;
   } else {
-    section.style.background = value;
+    main.style.background = value;
+    main.style.backgroundAttachment = '';
   }
 }
 
@@ -669,7 +672,7 @@ function updatePreview() {
     preview.style.background = '#f5f6fa';
     preview.style.backgroundSize = '';
   } else if (type === 'image') {
-    preview.style.background = `${value} center/cover no-repeat`;
+    preview.style.background = `url("${value}") center/cover no-repeat`;
   } else {
     preview.style.background = value;
   }
