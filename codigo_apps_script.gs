@@ -3,10 +3,13 @@ function doPost(e) {
     const data = JSON.parse(e.postData.contents);
     const ss   = SpreadsheetApp.getActiveSpreadsheet();
 
+    // ── Registrar ventas con número de ticket ────────────────────
     if (data.action === 'addVentas') {
       const sheet = ss.getSheetByName('Respuestas formulario');
+      const nroTicket = generarNroTicket(sheet);
       data.ventas.forEach(v => {
-        sheet.appendRow([v.fecha, v.codigo, v.descripcion, v.precio, v.cantidad, v.formaPago, v.turno, v.responsable]);
+        // Columnas: fecha | codigo | descripcion | precio | cantidad | formaPago | turno | responsable | nroTicket
+        sheet.appendRow([v.fecha, v.codigo, v.descripcion, v.precio, v.cantidad, v.formaPago, v.turno, v.responsable, nroTicket]);
         const inv   = ss.getSheetByName('Inventario');
         const datos = inv.getDataRange().getValues();
         for (let i = 2; i < datos.length; i++) {
@@ -16,12 +19,41 @@ function doPost(e) {
           }
         }
       });
-      return buildResponse({ status: 'ok' });
+      return buildResponse({ status: 'ok', nroTicket });
     }
 
+    // ── Buscar por número de ticket ──────────────────────────────
+    if (data.action === 'buscarTicket') {
+      const sheet = ss.getSheetByName('Respuestas formulario');
+      const filas = sheet.getDataRange().getValues();
+      const nro   = String(data.nroTicket).trim().toUpperCase();
+      // Columna 8 (índice) = nroTicket
+      const items = filas.slice(1).filter(r => String(r[8]||'').trim().toUpperCase() === nro);
+      if (!items.length) return buildResponse({ status: 'error', message: 'Ticket no encontrado' });
+      return buildResponse({
+        status: 'ok',
+        ticket: {
+          nro,
+          fecha:       items[0][0],
+          turno:       items[0][6],
+          responsable: items[0][7],
+          formaPago:   items[0][5],
+          items: items.map(r => ({
+            codigo:      r[1],
+            descripcion: r[2],
+            precio:      parseFloat(r[3]||0),
+            cantidad:    parseFloat(r[4]||0),
+            subtotal:    parseFloat(r[3]||0) * parseFloat(r[4]||0)
+          })),
+          total: items.reduce((s,r) => s + parseFloat(r[3]||0)*parseFloat(r[4]||0), 0)
+        }
+      });
+    }
+
+    // ── Login ────────────────────────────────────────────────────
     if (data.action === 'login') {
       const sheet = ss.getSheetByName('Usuarios');
-      if (!sheet) return buildResponse({ status: 'error', message: 'Hoja Usuarios no existe. Ejecutá setupUsuarios() en Apps Script.' });
+      if (!sheet) return buildResponse({ status: 'error', message: 'Hoja Usuarios no existe. Ejecutá setupUsuarios().' });
       const rows = sheet.getDataRange().getValues();
       for (let i = 1; i < rows.length; i++) {
         if (String(rows[i][0]).trim().toLowerCase() === data.usuario.trim().toLowerCase()
@@ -32,6 +64,7 @@ function doPost(e) {
       return buildResponse({ status: 'error', message: 'Usuario o contraseña incorrectos' });
     }
 
+    // ── Actualizar precio ────────────────────────────────────────
     if (data.action === 'updatePrecio') {
       const inv = ss.getSheetByName('Inventario');
       const datos = inv.getDataRange().getValues();
@@ -44,6 +77,7 @@ function doPost(e) {
       return buildResponse({ status: 'error', message: 'Producto no encontrado' });
     }
 
+    // ── Actualizar stock ─────────────────────────────────────────
     if (data.action === 'updateStock') {
       const inv = ss.getSheetByName('Inventario');
       const datos = inv.getDataRange().getValues();
@@ -56,12 +90,14 @@ function doPost(e) {
       return buildResponse({ status: 'error', message: 'Producto no encontrado' });
     }
 
+    // ── Agregar producto ─────────────────────────────────────────
     if (data.action === 'addProducto') {
       const inv = ss.getSheetByName('Inventario');
       inv.appendRow([data.codigo.trim(), data.descripcion.trim(), parseFloat(data.stock), parseFloat(data.precio)]);
       return buildResponse({ status: 'ok' });
     }
 
+    // ── Gestión usuarios ─────────────────────────────────────────
     if (data.action === 'getUsuarios') {
       const sheet = ss.getSheetByName('Usuarios');
       if (!sheet) return buildResponse({ status: 'error', message: 'Hoja Usuarios no existe' });
@@ -113,6 +149,19 @@ function doPost(e) {
   }
 }
 
+// ── Genera número de ticket: YYYYMMDD-NNN ────────────────────────
+function generarNroTicket(sheet) {
+  const hoy    = new Date();
+  const fecha  = Utilities.formatDate(hoy, Session.getScriptTimeZone(), 'yyyyMMdd');
+  const filas  = sheet.getDataRange().getValues();
+  // Contar cuántos tickets hay hoy (columna 8 = nroTicket)
+  const hoyCount = filas.slice(1).filter(r => String(r[8]||'').startsWith(fecha)).length;
+  // Calcular el número siguiente (basado en tickets únicos del día)
+  const ticketsHoy = new Set(filas.slice(1).filter(r => String(r[8]||'').startsWith(fecha)).map(r => r[8]));
+  const nro = String(ticketsHoy.size + 1).padStart(3, '0');
+  return `${fecha}-${nro}`;
+}
+
 function doGet(e) {
   return buildResponse({ status: 'ok', message: 'API activa' });
 }
@@ -121,7 +170,6 @@ function buildResponse(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
-// Ejecutá esta función UNA VEZ desde el editor de Apps Script para crear la hoja Usuarios
 function setupUsuarios() {
   const ss  = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName('Usuarios');

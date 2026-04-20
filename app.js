@@ -104,6 +104,7 @@ function showTab(tab, el) {
   el.classList.add('active');
   document.getElementById('tab-' + tab).classList.add('active');
   if (tab === 'historial')  loadHistorial();
+  if (tab === 'buscar')     { document.getElementById('buscar-nro').value=''; document.getElementById('resultado-ticket').style.display='none'; document.getElementById('error-buscar').style.display='none'; }
   if (tab === 'inventario') loadInventario();
   if (tab === 'resumen')    loadResumen();
   if (tab === 'config')     loadUsuarios();
@@ -201,12 +202,14 @@ async function guardarVenta() {
     formaPago: pago, turno, responsable
   }));
   try {
-    await fetch(SCRIPT_URL, {
-      method: 'POST', mode: 'no-cors',
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST', mode: 'cors',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'addVentas', ventas: payload })
     });
-    showTicket(payload, pago, turno, responsable);
+    let nroTicket = '';
+    try { const json = await res.json(); nroTicket = json.nroTicket || ''; } catch(e) {}
+    showTicket(payload, pago, turno, responsable, nroTicket);
     rows = []; nextId = 1; addRow();
     ['pago','turno','responsable'].forEach(id => document.getElementById(id).value = '');
     updateTotal();
@@ -216,32 +219,60 @@ async function guardarVenta() {
 }
 
 // ── Historial ────────────────────────────────────────────────────
+let historialData = [];
+
 async function loadHistorial() {
   const loadEl  = document.getElementById('loading-historial');
   const wrapEl  = document.getElementById('wrap-historial');
-  const tbodyEl = document.getElementById('tbody-historial');
   loadEl.style.display = 'block'; loadEl.textContent = 'Cargando...';
   wrapEl.style.display = 'none';
   try {
     const filas = await fetchSheet(VENTAS_SHEET);
-    const data  = filas.slice(1).filter(r => r[0]).reverse();
-    if (!data.length) { loadEl.textContent = 'Sin ventas registradas.'; return; }
-    tbodyEl.innerHTML = data.map(r => {
-      const subtotal = (parseFloat(r[3]||0)) * (parseFloat(r[4]||0));
-      return `<tr>
-        <td>${r[0]||''}</td>
-        <td style="font-family:monospace;font-size:12px">${r[1]||''}</td>
-        <td>${r[2]||''}</td>
-        <td>$${parseFloat(r[3]||0).toLocaleString('es-AR')}</td>
-        <td>${r[4]||''}</td>
-        <td style="font-weight:600">$${subtotal.toLocaleString('es-AR')}</td>
-        <td>${badgeTurno(r[6]||'')}</td>
-        <td>${r[7]||''}</td>
-        <td>${badgePago(r[5]||'')}</td>
-      </tr>`;
-    }).join('');
+    historialData = filas.slice(1).filter(r => r[0]).reverse();
+    if (!historialData.length) { loadEl.textContent = 'Sin ventas registradas.'; return; }
+    renderHistorial(historialData);
     loadEl.style.display = 'none'; wrapEl.style.display = 'block';
   } catch(e) { loadEl.textContent = 'Error al cargar. Verificá la configuración.'; }
+}
+
+function renderHistorial(data) {
+  const tbodyEl = document.getElementById('tbody-historial');
+  tbodyEl.innerHTML = data.map(r => {
+    const subtotal = (parseFloat(r[3]||0)) * (parseFloat(r[4]||0));
+    const nro = r[8] || '—';
+    return `<tr>
+      <td><span class="badge-ticket" onclick="irABuscar('${nro}')">${nro}</span></td>
+      <td>${r[0]||''}</td>
+      <td style="font-family:monospace;font-size:12px">${r[1]||''}</td>
+      <td>${r[2]||''}</td>
+      <td>$${parseFloat(r[3]||0).toLocaleString('es-AR')}</td>
+      <td>${r[4]||''}</td>
+      <td style="font-weight:600">$${subtotal.toLocaleString('es-AR')}</td>
+      <td>${badgeTurno(r[6]||'')}</td>
+      <td>${r[7]||''}</td>
+      <td>${badgePago(r[5]||'')}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filtrarHistorial() {
+  const q = document.getElementById('historial-filter').value.toLowerCase().trim();
+  if (!q) { renderHistorial(historialData); return; }
+  const filtrado = historialData.filter(r =>
+    String(r[8]||'').toLowerCase().includes(q) ||
+    String(r[7]||'').toLowerCase().includes(q) ||
+    String(r[2]||'').toLowerCase().includes(q) ||
+    String(r[1]||'').toLowerCase().includes(q) ||
+    String(r[0]||'').toLowerCase().includes(q)
+  );
+  renderHistorial(filtrado);
+}
+
+function irABuscar(nro) {
+  const btnBuscar = document.getElementById('tab-btn-buscar');
+  if (btnBuscar) { showTab('buscar', btnBuscar); }
+  document.getElementById('buscar-nro').value = nro;
+  buscarTicket();
 }
 
 // ── Inventario ───────────────────────────────────────────────────
@@ -681,11 +712,45 @@ function initFondo() {
   applyFondoToSection(); updatePreview();
 }
 
+// ── Buscar ticket ────────────────────────────────────────────────
+async function buscarTicket() {
+  const nro    = document.getElementById('buscar-nro').value.trim().toUpperCase();
+  const loadEl = document.getElementById('loading-buscar');
+  const errEl  = document.getElementById('error-buscar');
+  const resEl  = document.getElementById('resultado-ticket');
+  if (!nro) { errEl.textContent = 'Ingresá un número de ticket.'; errEl.style.display='block'; return; }
+  errEl.style.display = 'none'; resEl.style.display = 'none';
+  loadEl.style.display = 'block';
+  try {
+    const res = await callScript({ action: 'buscarTicket', nroTicket: nro });
+    loadEl.style.display = 'none';
+    if (res.status !== 'ok') { errEl.textContent = res.message || 'Ticket no encontrado.'; errEl.style.display='block'; return; }
+    const t = res.ticket;
+    document.getElementById('te-nro').textContent = '# ' + t.nro;
+    document.getElementById('te-meta').innerHTML = `
+      <span>${t.fecha}</span>
+      ${badgeTurno(t.turno)}
+      ${badgePago(t.formaPago)}
+      <strong>${t.responsable}</strong>`;
+    document.getElementById('te-items').innerHTML = t.items.map(i => `
+      <div class="te-item">
+        <span class="te-item-desc">${i.descripcion||i.codigo}</span>
+        <span class="right">${i.cantidad}</span>
+        <span class="right">$${i.precio.toLocaleString('es-AR')}</span>
+        <span class="right" style="font-weight:700">$${i.subtotal.toLocaleString('es-AR')}</span>
+      </div>`).join('');
+    document.getElementById('te-total').textContent = '$' + Math.round(t.total).toLocaleString('es-AR');
+    resEl.style.display = 'block';
+  } catch(e) { loadEl.style.display='none'; errEl.textContent='Error de conexión.'; errEl.style.display='block'; }
+}
+
 // ── Ticket ───────────────────────────────────────────────────────
-function showTicket(items, pago, turno, responsable) {
+function showTicket(items, pago, turno, responsable, nroTicket='') {
   const fecha = new Date().toLocaleDateString('es-AR');
   const hora  = new Date().toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'});
   document.getElementById('ticket-fecha').textContent = `${fecha}  ${hora}`;
+  const nroEl = document.getElementById('ticket-nro');
+  if (nroEl) nroEl.textContent = nroTicket ? '# ' + nroTicket : '';
   document.getElementById('ticket-meta').innerHTML = `
     <span class="badge b-turno-${turno==='MAÑANA'?'m':turno==='TARDE'?'t':'n'}">${turno}</span>
     <span class="badge ${pago==='EFECTIVO'?'b-ef':pago==='TRANSFERENCIA'?'b-tr':'b-cig'}">${pago}</span>

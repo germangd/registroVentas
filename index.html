@@ -53,6 +53,7 @@
     <nav class="tabs" id="nav-tabs">
       <button class="tab active" id="tab-btn-nueva"      onclick="showTab('nueva', this)">Nueva venta</button>
       <button class="tab"        id="tab-btn-historial"  onclick="showTab('historial', this)">Historial</button>
+      <button class="tab" id="tab-btn-buscar" onclick="showTab('buscar', this)">🔍 Ticket</button>
       <button class="tab admin-only" id="tab-btn-inventario" onclick="showTab('inventario', this)">Inventario</button>
       <button class="tab admin-only" id="tab-btn-resumen"    onclick="showTab('resumen', this)">Resumen</button>
       <button class="tab admin-only tab-config" id="tab-btn-config" onclick="showTab('config', this)">⚙ Config</button>
@@ -117,11 +118,14 @@
           <div class="hero-icon">📋</div><div class="hero-text">Historial de ventas</div>
         </div>
         <div class="card">
+          <div class="historial-search">
+            <input type="text" id="historial-filter" placeholder="🔍  Buscar por N° ticket, responsable, producto..." oninput="filtrarHistorial()">
+          </div>
           <div class="loading" id="loading-historial">Cargando...</div>
           <div class="table-wrap" id="wrap-historial" style="display:none">
             <table>
               <thead><tr>
-                <th>Fecha</th><th>Código</th><th>Descripción</th>
+                <th>N° Ticket</th><th>Fecha</th><th>Código</th><th>Descripción</th>
                 <th>Precio</th><th>Cant.</th><th>Subtotal</th>
                 <th>Turno</th><th>Responsable</th><th>Pago</th>
               </tr></thead>
@@ -243,6 +247,39 @@
         </div>
       </section>
 
+      <!-- ── BUSCAR TICKET ────────────────────────────── -->
+      <section id="tab-buscar" class="section">
+        <div class="section-hero hero-buscar">
+          <div class="hero-icon">🔍</div><div class="hero-text">Buscar ticket</div>
+        </div>
+        <div class="card">
+          <p class="hint">Ingresá el número de ticket para ver el detalle de esa venta.</p>
+          <div class="buscar-row">
+            <input type="text" id="buscar-nro" placeholder="Ej: 20260419-001"
+              style="flex:1;padding:11px 14px;border:1.5px solid #c7d2fe;border-radius:8px;font-size:14px;font-family:monospace;letter-spacing:1px"
+              onkeydown="if(event.key==='Enter') buscarTicket()">
+            <button class="btn-primary" onclick="buscarTicket()" style="width:auto;padding:11px 22px">Buscar</button>
+          </div>
+          <div class="loading" id="loading-buscar" style="display:none">Buscando...</div>
+          <div class="error-msg" id="error-buscar" style="margin-top:12px"></div>
+          <div id="resultado-ticket" style="display:none;margin-top:16px">
+            <div class="ticket-encontrado">
+              <div class="te-header">
+                <div class="te-nro" id="te-nro"></div>
+                <div class="te-meta" id="te-meta"></div>
+              </div>
+              <div class="te-items-head">
+                <span>Descripción</span><span class="right">Cant.</span><span class="right">Precio</span><span class="right">Subtotal</span>
+              </div>
+              <div id="te-items"></div>
+              <div class="te-total-bar">
+                <span>TOTAL</span><span id="te-total"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </main>
 
   </div><!-- /app-screen -->
@@ -253,6 +290,7 @@
       <div class="ticket-header">
         <div class="ticket-check">✓</div>
         <div class="ticket-title">Venta registrada</div>
+        <div class="ticket-nro" id="ticket-nro"></div>
         <div class="ticket-subtitle" id="ticket-fecha"></div>
       </div>
       <div class="ticket-meta" id="ticket-meta"></div>
