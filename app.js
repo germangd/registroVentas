@@ -116,6 +116,7 @@ function showTab(tab, el) {
   if (tab === 'inventario') loadInventario();
   if (tab === 'resumen')    loadResumen();
   if (tab === 'config')     loadUsuarios();
+  if (tab === 'auditoria')  loadAuditoria();
 }
 
 // ── Grilla ───────────────────────────────────────────────────────
@@ -611,6 +612,81 @@ function renderChart(canvasId, grupos, colores) {
       }
     }
   });
+}
+
+// ── Auditoría ────────────────────────────────────────────────────
+let auditTabActual = 'anuladas';
+
+function switchAuditTab(tab, btn) {
+  document.querySelectorAll('.audit-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  auditTabActual = tab;
+  document.getElementById('audit-anuladas').style.display       = tab === 'anuladas'       ? 'block' : 'none';
+  document.getElementById('audit-modificaciones').style.display = tab === 'modificaciones' ? 'block' : 'none';
+  if (tab === 'anuladas')       loadAnuladas();
+  if (tab === 'modificaciones') loadModificaciones();
+}
+
+async function loadAuditoria() {
+  // Cargar el tab activo
+  if (auditTabActual === 'anuladas') loadAnuladas();
+  else loadModificaciones();
+}
+
+async function loadAnuladas() {
+  const loadEl  = document.getElementById('loading-anuladas');
+  const wrapEl  = document.getElementById('wrap-anuladas');
+  const emptyEl = document.getElementById('empty-anuladas');
+  const tbodyEl = document.getElementById('tbody-anuladas');
+  loadEl.style.display = 'block'; wrapEl.style.display = 'none'; emptyEl.style.display = 'none';
+  try {
+    const filas = await fetchSheet('Anuladas');
+    const data  = filas.slice(1).filter(r => r[0]).reverse();
+    loadEl.style.display = 'none';
+    if (!data.length) { emptyEl.style.display = 'block'; return; }
+    // cols: fecha_orig|codigo|desc|precio|cantidad|formaPago|turno|responsable|nroTicket|anulado_por|fecha_anulacion|motivo
+    tbodyEl.innerHTML = data.map(r => {
+      const subtotal = (parseFloat(r[3]||0)) * (parseFloat(r[4]||0));
+      return `<tr class="fila-anulada">
+        <td><span class="badge-ticket">${r[8]||'—'}</span></td>
+        <td>${r[0]||''}</td>
+        <td style="font-family:monospace;font-size:12px">${r[1]||''}</td>
+        <td>${r[2]||''}</td>
+        <td>$${parseFloat(r[3]||0).toLocaleString('es-AR')}</td>
+        <td>${r[4]||''}</td>
+        <td style="font-weight:600">$${subtotal.toLocaleString('es-AR')}</td>
+        <td>${badgeTurno(r[6]||'')}</td>
+        <td>${r[7]||''}</td>
+        <td>${badgePago(r[5]||'')}</td>
+        <td style="font-weight:600;color:#dc2626">${r[9]||''}</td>
+        <td style="color:var(--text-muted);font-size:12px">${r[10]||''}</td>
+        <td style="font-style:italic;color:var(--text-muted)">${r[11]||'—'}</td>
+      </tr>`;
+    }).join('');
+    wrapEl.style.display = 'block';
+  } catch(e) { loadEl.textContent = 'Error al cargar anuladas.'; }
+}
+
+async function loadModificaciones() {
+  const loadEl  = document.getElementById('loading-modificaciones');
+  const wrapEl  = document.getElementById('wrap-modificaciones');
+  const emptyEl = document.getElementById('empty-modificaciones');
+  const tbodyEl = document.getElementById('tbody-modificaciones');
+  loadEl.style.display = 'block'; wrapEl.style.display = 'none'; emptyEl.style.display = 'none';
+  try {
+    const filas = await fetchSheet('Auditoria');
+    const data  = filas.slice(1).filter(r => r[0]).reverse();
+    loadEl.style.display = 'none';
+    if (!data.length) { emptyEl.style.display = 'block'; return; }
+    // cols: nroTicket|accion|usuario|fecha
+    tbodyEl.innerHTML = data.map(r => `<tr>
+      <td><span class="badge-ticket">${r[0]||'—'}</span></td>
+      <td><span class="badge-accion">${r[1]||''}</span></td>
+      <td style="font-weight:600">${r[2]||''}</td>
+      <td style="color:var(--text-muted);font-size:12px">${r[3]||''}</td>
+    </tr>`).join('');
+    wrapEl.style.display = 'block';
+  } catch(e) { loadEl.textContent = 'Error al cargar modificaciones.'; }
 }
 
 // ── Fondo ────────────────────────────────────────────────────────

@@ -56,6 +56,7 @@
       <button class="tab" id="tab-btn-buscar" onclick="showTab('buscar', this)">🔍 Ticket</button>
       <button class="tab admin-only" id="tab-btn-inventario" onclick="showTab('inventario', this)">Inventario</button>
       <button class="tab admin-only" id="tab-btn-resumen"    onclick="showTab('resumen', this)">Resumen</button>
+      <button class="tab admin-only" id="tab-btn-auditoria" onclick="showTab('auditoria', this)">📒 Auditoría</button>
       <button class="tab admin-only tab-config" id="tab-btn-config" onclick="showTab('config', this)">⚙ Config</button>
     </nav>
 
@@ -242,6 +243,53 @@
             </table>
           </div>
           <button class="btn-add-user" onclick="openAddUsuario()" style="margin-top:14px">+ Agregar usuario</button>
+        </div>
+      </section>
+
+      <!-- ── AUDITORÍA (admin) ──────────────────────────── -->
+      <section id="tab-auditoria" class="section">
+        <div class="section-hero hero-auditoria">
+          <div class="hero-icon">📒</div><div class="hero-text">Auditoría de movimientos</div>
+        </div>
+
+        <!-- Sub-tabs -->
+        <div class="audit-tabs">
+          <button class="audit-tab active" id="atab-anuladas" onclick="switchAuditTab('anuladas',this)">✕ Anuladas</button>
+          <button class="audit-tab" id="atab-modificaciones" onclick="switchAuditTab('modificaciones',this)">✏ Modificaciones</button>
+        </div>
+
+        <!-- Anuladas -->
+        <div id="audit-anuladas">
+          <div class="card">
+            <div class="loading" id="loading-anuladas">Cargando...</div>
+            <div class="table-wrap" id="wrap-anuladas" style="display:none">
+              <table>
+                <thead><tr>
+                  <th>N° Ticket</th><th>Fecha orig.</th><th>Código</th><th>Descripción</th>
+                  <th>Precio</th><th>Cant.</th><th>Subtotal</th><th>Turno</th>
+                  <th>Responsable</th><th>Pago</th><th>Anulado por</th><th>Fecha anulación</th><th>Motivo</th>
+                </tr></thead>
+                <tbody id="tbody-anuladas"></tbody>
+              </table>
+            </div>
+            <div class="audit-empty" id="empty-anuladas" style="display:none">No hay ventas anuladas.</div>
+          </div>
+        </div>
+
+        <!-- Modificaciones -->
+        <div id="audit-modificaciones" style="display:none">
+          <div class="card">
+            <div class="loading" id="loading-modificaciones">Cargando...</div>
+            <div class="table-wrap" id="wrap-modificaciones" style="display:none">
+              <table>
+                <thead><tr>
+                  <th>N° Ticket</th><th>Acción</th><th>Usuario</th><th>Fecha y hora</th>
+                </tr></thead>
+                <tbody id="tbody-modificaciones"></tbody>
+              </table>
+            </div>
+            <div class="audit-empty" id="empty-modificaciones" style="display:none">No hay modificaciones registradas.</div>
+          </div>
         </div>
       </section>
 
