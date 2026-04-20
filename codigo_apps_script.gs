@@ -6,7 +6,7 @@ function doPost(e) {
     // ── Registrar ventas con número de ticket ────────────────────
     if (data.action === 'addVentas') {
       const sheet = ss.getSheetByName('Respuestas formulario');
-      const nroTicket = generarNroTicket(sheet);
+      const nroTicket = generarNroTicket(sheet, data.ventas[0].responsable);
       data.ventas.forEach(v => {
         // Columnas: fecha | codigo | descripcion | precio | cantidad | formaPago | turno | responsable | nroTicket
         sheet.appendRow([v.fecha, v.codigo, v.descripcion, v.precio, v.cantidad, v.formaPago, v.turno, v.responsable, nroTicket]);
@@ -149,17 +149,14 @@ function doPost(e) {
   }
 }
 
-// ── Genera número de ticket: YYYYMMDD-NNN ────────────────────────
-function generarNroTicket(sheet) {
-  const hoy    = new Date();
-  const fecha  = Utilities.formatDate(hoy, Session.getScriptTimeZone(), 'yyyyMMdd');
-  const filas  = sheet.getDataRange().getValues();
-  // Contar cuántos tickets hay hoy (columna 8 = nroTicket)
-  const hoyCount = filas.slice(1).filter(r => String(r[8]||'').startsWith(fecha)).length;
-  // Calcular el número siguiente (basado en tickets únicos del día)
-  const ticketsHoy = new Set(filas.slice(1).filter(r => String(r[8]||'').startsWith(fecha)).map(r => r[8]));
-  const nro = String(ticketsHoy.size + 1).padStart(3, '0');
-  return `${fecha}-${nro}`;
+// ── Genera número de ticket: XX-NNN (iniciales responsable + correlativo global) ──
+function generarNroTicket(sheet, responsable) {
+  const iniciales = String(responsable || 'XX').trim().substring(0, 2).toUpperCase();
+  const filas     = sheet.getDataRange().getValues();
+  // Contar tickets únicos globales (columna 8 = nroTicket)
+  const ticketsExistentes = new Set(filas.slice(1).map(r => r[8]).filter(v => v));
+  const nro = String(ticketsExistentes.size + 1).padStart(3, '0');
+  return `${iniciales}-${nro}`;
 }
 
 function doGet(e) {
