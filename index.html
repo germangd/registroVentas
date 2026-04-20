@@ -100,10 +100,8 @@
             </div>
             <div class="form-group">
               <label>👤 Responsable</label>
-              <select id="responsable">
-                <option value="">Seleccionar...</option>
-                <option>CLEVER</option><option>BELEN</option><option>IRIS</option>
-              </select>
+              <div class="responsable-fijo" id="responsable-fijo"></div>
+              <input type="hidden" id="responsable">
             </div>
           </div>
           <button class="btn-primary" id="btn-guardar" onclick="guardarVenta()">✓ &nbsp;Registrar venta</button>
@@ -275,6 +273,7 @@
               <div class="te-total-bar">
                 <span>TOTAL</span><span id="te-total"></span>
               </div>
+              <div class="te-actions" id="te-actions"></div>
             </div>
           </div>
         </div>
@@ -381,6 +380,51 @@
         <div style="display:flex;gap:10px;margin-top:6px">
           <button class="btn-cancel-edit" onclick="cerrarModalAddUser()">Cancelar</button>
           <button class="btn-primary" id="btn-save-user" onclick="guardarAddUsuario()" style="flex:1">Crear usuario</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL ANULAR ─────────────────────────────── -->
+  <div class="modal-overlay" id="modal-anular" onclick="cerrarModalAnular(event)">
+    <div class="modal-box" style="max-width:380px">
+      <div class="modal-header-edit" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">
+        <div class="modal-edit-title">Anular ticket</div>
+        <div class="modal-edit-sub" id="anular-nro-label"></div>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+        <p style="font-size:13px;color:#374151">Esta acción moverá la venta a la hoja <strong>Anuladas</strong> y repondrá el stock. No se puede deshacer.</p>
+        <div class="form-group"><label>Motivo (opcional)</label>
+          <input type="text" id="anular-motivo" placeholder="Ej: error en el registro"
+            style="width:100%;padding:9px 10px;border:1.5px solid #fca5a5;border-radius:8px;font-size:14px">
+        </div>
+        <div class="edit-prod-error" id="anular-error"></div>
+        <div style="display:flex;gap:10px;margin-top:6px">
+          <button class="btn-cancel-edit" onclick="cerrarModalAnular()">Cancelar</button>
+          <button class="btn-primary" id="btn-confirmar-anular" onclick="confirmarAnular()"
+            style="flex:1;background:linear-gradient(135deg,#dc2626,#b91c1c)">Confirmar anulación</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL MODIFICAR ───────────────────────────── -->
+  <div class="modal-overlay" id="modal-modificar" onclick="cerrarModalModificar(event)">
+    <div class="modal-box" style="max-width:500px">
+      <div class="modal-header-edit" style="background:linear-gradient(135deg,#0284c7,#0369a1)">
+        <div class="modal-edit-title">Modificar ticket</div>
+        <div class="modal-edit-sub" id="modificar-nro-label"></div>
+      </div>
+      <div style="padding:20px">
+        <div class="mod-grid-head">
+          <span>Descripción</span><span>Cant.</span><span>Precio</span><span>Pago</span><span></span>
+        </div>
+        <div id="mod-items"></div>
+        <div class="edit-prod-error" id="modificar-error"></div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn-cancel-edit" onclick="cerrarModalModificar()">Cancelar</button>
+          <button class="btn-primary" id="btn-confirmar-mod" onclick="confirmarModificar()"
+            style="flex:1;background:linear-gradient(135deg,#0284c7,#0369a1)">Guardar cambios</button>
         </div>
       </div>
     </div>

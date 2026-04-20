@@ -143,6 +143,92 @@ function doPost(e) {
       return buildResponse({ status: 'error', message: 'Usuario no encontrado' });
     }
 
+    // ── Anular ticket ─────────────────────────────────────────────
+    if (data.action === 'anularTicket') {
+      const sheet    = ss.getSheetByName('Respuestas formulario');
+      const anuladas = ss.getSheetByName('Anuladas') || ss.insertSheet('Anuladas');
+      // Crear encabezados si la hoja está vacía
+      if (anuladas.getLastRow() === 0) {
+        anuladas.appendRow(['fecha_orig','codigo','descripcion','precio','cantidad','formaPago','turno','responsable','nroTicket','anulado_por','fecha_anulacion','motivo']);
+      }
+      const filas   = sheet.getDataRange().getValues();
+      const nro     = String(data.nroTicket).trim().toUpperCase();
+      const inv     = ss.getSheetByName('Inventario');
+      const invData = inv.getDataRange().getValues();
+      let found = false;
+      // Recorrer de atrás para adelante para no perder índices al borrar
+      for (let i = filas.length - 1; i >= 1; i--) {
+        if (String(filas[i][8]||'').trim().toUpperCase() === nro) {
+          found = true;
+          // Reponer stock
+          const codigo   = String(filas[i][1]).trim();
+          const cantidad = parseFloat(filas[i][4]||0);
+          for (let j = 2; j < invData.length; j++) {
+            if (String(invData[j][0]).trim() === codigo) {
+              inv.getRange(j+1,3).setValue((parseFloat(invData[j][2])||0) + cantidad);
+              break;
+            }
+          }
+          // Mover a Anuladas
+          const fila = filas[i].slice(0,9);
+          fila.push(data.anuladoPor, Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm'), data.motivo||'');
+          anuladas.appendRow(fila);
+          sheet.deleteRow(i+1);
+        }
+      }
+      if (!found) return buildResponse({ status: 'error', message: 'Ticket no encontrado' });
+      return buildResponse({ status: 'ok' });
+    }
+
+    // ── Modificar ticket ──────────────────────────────────────────
+    if (data.action === 'modificarTicket') {
+      const sheet  = ss.getSheetByName('Respuestas formulario');
+      const filas  = sheet.getDataRange().getValues();
+      const nro    = String(data.nroTicket).trim().toUpperCase();
+      const inv    = ss.getSheetByName('Inventario');
+      const invData = inv.getDataRange().getValues();
+
+      // Primero revertir el stock de los items originales
+      for (let i = 1; i < filas.length; i++) {
+        if (String(filas[i][8]||'').trim().toUpperCase() === nro) {
+          const codigo   = String(filas[i][1]).trim();
+          const cantidad = parseFloat(filas[i][4]||0);
+          for (let j = 2; j < invData.length; j++) {
+            if (String(invData[j][0]).trim() === codigo) {
+              inv.getRange(j+1,3).setValue((parseFloat(invData[j][2])||0) + cantidad);
+              break;
+            }
+          }
+        }
+      }
+
+      // Borrar filas originales del ticket
+      for (let i = filas.length - 1; i >= 1; i--) {
+        if (String(filas[i][8]||'').trim().toUpperCase() === nro) {
+          sheet.deleteRow(i+1);
+        }
+      }
+
+      // Insertar filas modificadas y descontar nuevo stock
+      const invData2 = inv.getDataRange().getValues();
+      data.items.forEach(v => {
+        sheet.appendRow([v.fecha, v.codigo, v.descripcion, v.precio, v.cantidad, v.formaPago, v.turno, v.responsable, nro]);
+        for (let j = 2; j < invData2.length; j++) {
+          if (String(invData2[j][0]).trim() === String(v.codigo).trim()) {
+            inv.getRange(j+1,3).setValue(Math.max(0,(parseFloat(invData2[j][2])||0) - v.cantidad));
+            break;
+          }
+        }
+      });
+
+      // Registrar en auditoría
+      let audit = ss.getSheetByName('Auditoria');
+      if (!audit) { audit = ss.insertSheet('Auditoria'); audit.appendRow(['nroTicket','accion','usuario','fecha']); }
+      audit.appendRow([nro,'MODIFICACION',data.modificadoPor, Utilities.formatDate(new Date(),Session.getScriptTimeZone(),'dd/MM/yyyy HH:mm')]);
+
+      return buildResponse({ status: 'ok' });
+    }
+
     return buildResponse({ status: 'error', message: 'Acción desconocida' });
   } catch(err) {
     return buildResponse({ status: 'error', message: err.message });

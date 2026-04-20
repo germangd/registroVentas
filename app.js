@@ -75,6 +75,14 @@ function startApp() {
   document.querySelectorAll('.admin-only').forEach(el => {
     el.style.display = isAdmin ? '' : 'none';
   });
+  // Responsable fijo según usuario logueado
+  const fijoEl = document.getElementById('responsable-fijo');
+  const respInput = document.getElementById('responsable');
+  if (fijoEl && respInput) {
+    const nombre = currentUser.usuario.toUpperCase();
+    fijoEl.textContent = nombre;
+    respInput.value = nombre;
+  }
   // Inicializar
   addRow();
   preloadInventario();
@@ -211,7 +219,8 @@ async function guardarVenta() {
     try { const json = await res.json(); nroTicket = json.nroTicket || ''; } catch(e) {}
     showTicket(payload, pago, turno, responsable, nroTicket);
     rows = []; nextId = 1; addRow();
-    ['pago','turno','responsable'].forEach(id => document.getElementById(id).value = '');
+    ['pago','turno'].forEach(id => document.getElementById(id).value = '');
+    // responsable se mantiene fijo al usuario logueado
     updateTotal();
     await preloadInventario();
   } catch(err) { showError('No se pudo conectar. Verificá tu conexión a internet.'); }
@@ -712,6 +721,9 @@ function initFondo() {
   applyFondoToSection(); updatePreview();
 }
 
+// ── Variables para anular/modificar ─────────────────────────────
+let ticketActual = null;
+
 // ── Buscar ticket ────────────────────────────────────────────────
 async function buscarTicket() {
   const nro    = document.getElementById('buscar-nro').value.trim().toUpperCase();
@@ -740,8 +752,123 @@ async function buscarTicket() {
         <span class="right" style="font-weight:700">$${i.subtotal.toLocaleString('es-AR')}</span>
       </div>`).join('');
     document.getElementById('te-total').textContent = '$' + Math.round(t.total).toLocaleString('es-AR');
+    ticketActual = t;
+    // Mostrar botones según permisos
+    const isAdmin   = currentUser.rol === 'admin';
+    const esMio     = t.responsable.toUpperCase() === currentUser.usuario.toUpperCase();
+    const puedeAct  = isAdmin || esMio;
+    const actionsEl = document.getElementById('te-actions');
+    if (actionsEl && puedeAct) {
+      actionsEl.innerHTML = `
+        <button class="btn-mod-ticket" onclick="abrirModificar()">✏ Modificar</button>
+        <button class="btn-anular-ticket" onclick="abrirAnular()">✕ Anular ticket</button>`;
+    } else if (actionsEl) {
+      actionsEl.innerHTML = '<span class="te-sin-permiso">Solo el admin o el responsable puede modificar esta venta.</span>';
+    }
     resEl.style.display = 'block';
   } catch(e) { loadEl.style.display='none'; errEl.textContent='Error de conexión.'; errEl.style.display='block'; }
+}
+
+// ── Anular ticket ────────────────────────────────────────────────
+function abrirAnular() {
+  if (!ticketActual) return;
+  document.getElementById('anular-nro-label').textContent = '# ' + ticketActual.nro;
+  document.getElementById('anular-motivo').value = '';
+  document.getElementById('anular-error').textContent = '';
+  document.getElementById('modal-anular').classList.add('open');
+}
+function cerrarModalAnular(e) {
+  if (e && e.target !== document.getElementById('modal-anular')) return;
+  document.getElementById('modal-anular').classList.remove('open');
+}
+async function confirmarAnular() {
+  const motivo = document.getElementById('anular-motivo').value.trim();
+  const errEl  = document.getElementById('anular-error');
+  const btn    = document.getElementById('btn-confirmar-anular');
+  btn.disabled = true; btn.textContent = 'Anulando...';
+  errEl.textContent = '';
+  try {
+    const res = await callScript({
+      action: 'anularTicket',
+      nroTicket:  ticketActual.nro,
+      anuladoPor: currentUser.usuario,
+      motivo
+    });
+    if (res.status === 'ok') {
+      document.getElementById('modal-anular').classList.remove('open');
+      document.getElementById('resultado-ticket').style.display = 'none';
+      document.getElementById('buscar-nro').value = '';
+      ticketActual = null;
+      mostrarMensajeExito('Ticket anulado y movido a hoja Anuladas. Stock repuesto.');
+    } else { errEl.textContent = res.message || 'Error al anular.'; }
+  } catch(e) { errEl.textContent = 'Error de conexión.'; }
+  btn.disabled = false; btn.textContent = 'Confirmar anulación';
+}
+
+// ── Modificar ticket ──────────────────────────────────────────────
+function abrirModificar() {
+  if (!ticketActual) return;
+  document.getElementById('modificar-nro-label').textContent = '# ' + ticketActual.nro;
+  document.getElementById('modificar-error').textContent = '';
+  // Renderizar items editables
+  document.getElementById('mod-items').innerHTML = ticketActual.items.map((item, i) => `
+    <div class="mod-item-row">
+      <span class="mod-desc">${item.descripcion||item.codigo}</span>
+      <input type="number" class="mod-input" id="mod-cant-${i}" value="${item.cantidad}" min="0" step="1" placeholder="Cant.">
+      <input type="number" class="mod-input" id="mod-precio-${i}" value="${item.precio}" min="0" step="0.01" placeholder="Precio">
+      <select class="mod-select" id="mod-pago-${i}">
+        ${['EFECTIVO','TRANSFERENCIA','CIGARRILLOS EFECT.','CIGARRILLOS MP']
+          .map(p => `<option ${p===ticketActual.formaPago?'selected':''}>${p}</option>`).join('')}
+      </select>
+      <button class="mod-del" onclick="this.closest('.mod-item-row').remove()">✕</button>
+    </div>`).join('');
+  document.getElementById('modal-modificar').classList.add('open');
+}
+function cerrarModalModificar(e) {
+  if (e && e.target !== document.getElementById('modal-modificar')) return;
+  document.getElementById('modal-modificar').classList.remove('open');
+}
+async function confirmarModificar() {
+  const errEl = document.getElementById('modificar-error');
+  const btn   = document.getElementById('btn-confirmar-mod');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  errEl.textContent = '';
+  try {
+    const fecha = ticketActual.fecha;
+    const turno = ticketActual.turno;
+    const resp  = ticketActual.responsable;
+    const items = ticketActual.items.map((item, i) => {
+      const cant   = parseFloat(document.getElementById('mod-cant-'+i)?.value || 0);
+      const precio = parseFloat(document.getElementById('mod-precio-'+i)?.value || 0);
+      const pago   = document.getElementById('mod-pago-'+i)?.value || ticketActual.formaPago;
+      return { fecha, codigo: item.codigo, descripcion: item.descripcion, precio, cantidad: cant, formaPago: pago, turno, responsable: resp };
+    }).filter(it => it.cantidad > 0);
+    if (!items.length) { errEl.textContent = 'Debe quedar al menos un ítem.'; btn.disabled=false; btn.textContent='Guardar cambios'; return; }
+    const res = await callScript({
+      action: 'modificarTicket',
+      nroTicket:    ticketActual.nro,
+      modificadoPor: currentUser.usuario,
+      items
+    });
+    if (res.status === 'ok') {
+      document.getElementById('modal-modificar').classList.remove('open');
+      mostrarMensajeExito('Ticket modificado correctamente.');
+      // Refrescar resultado
+      document.getElementById('buscar-nro').value = ticketActual.nro;
+      await buscarTicket();
+    } else { errEl.textContent = res.message || 'Error al modificar.'; }
+  } catch(e) { errEl.textContent = 'Error de conexión.'; }
+  btn.disabled = false; btn.textContent = 'Guardar cambios';
+}
+
+function mostrarMensajeExito(msg) {
+  const el = document.getElementById('error-buscar');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.background = '#ecfdf5';
+  el.style.color = '#065f46';
+  el.style.borderColor = '#6ee7b7';
+  setTimeout(() => { el.style.display='none'; el.style.background=''; el.style.color=''; el.style.borderColor=''; }, 4000);
 }
 
 // ── Ticket ───────────────────────────────────────────────────────
