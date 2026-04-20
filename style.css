@@ -186,11 +186,7 @@ th.center, td.center { text-align: center; }
 .grad-item:hover { transform: translateY(-2px); box-shadow: 0 6px 16px #0002; }
 .grad-item.grad-active { box-shadow: 0 0 0 3px #7c3aed, 0 4px 14px #7c3aed40; transform: translateY(-2px); }
 .grad-label { font-size: 10px; font-weight: 700; color: #374151; background: #ffffffcc; border-radius: 4px; padding: 1px 5px; }
-.upload-area { display: block; width: 100%; border: 2px dashed #c4b5fd; border-radius: var(--radius); padding: 28px; text-align: center; cursor: pointer; transition: all 0.15s; background: #faf5ff; box-sizing: border-box; }
-.upload-area:hover { border-color: #7c3aed; background: #f3e8ff; }
-.upload-icon { font-size: 32px; margin-bottom: 8px; }
-.upload-text { font-weight: 700; color: #7c3aed; margin-bottom: 4px; }
-.upload-hint { font-size: 12px; color: var(--text-muted); }
+/* upload area removed */
 .fondo-preview { border-radius: var(--radius); height: 130px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); transition: all 0.3s; overflow: hidden; position: relative; background-color: #f5f6fa; }
 .preview-card { background: #ffffffdd; border-radius: 10px; padding: 14px 20px; min-width: 180px; max-width: 80%; box-shadow: 0 4px 16px #0002; text-align: center; }
 .btn-reset { margin-top: 14px; padding: 9px 18px; background: #fef2f2; color: #991b1b; border: 1.5px solid #fca5a5; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
@@ -265,6 +261,15 @@ th.center, td.center { text-align: center; }
 .btn-del-user:hover { background: #fee2e2; }
 .badge-rol-admin { background: #fef3c7; color: #92400e; }
 .badge-rol-vend  { background: #dbeafe; color: #1e40af; }
+
+/* SIN STOCK BADGE */
+.b-sin { background: #fee2e2; color: #991b1b; }
+
+/* FILTRO INVENTARIO */
+.inv-filtros { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.inv-fbtn { padding:6px 14px; border:1.5px solid var(--border); border-radius:20px; background:#fff; color:var(--text-muted); font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s; }
+.inv-fbtn:hover { border-color:#6366f1; color:#6366f1; }
+.inv-fbtn.active { background:linear-gradient(135deg,#6366f1,#4f46e5); border-color:#4f46e5; color:#fff; box-shadow:0 2px 8px #6366f140; }
 
 /* TICKET NUMBER */
 .ticket-nro { font-size: 18px; font-weight: 800; color: #a5f3fc; letter-spacing: 2px; margin: 4px 0; font-family: monospace; }

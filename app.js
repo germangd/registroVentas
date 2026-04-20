@@ -102,6 +102,7 @@ async function preloadInventario() {
       stock:  parseFloat(r[2] || 0),
       precio: parseFloat(r[3] || 0) || 100
     }));
+    inventarioCache = inventarioDB; // actualizar caché
   } catch(e) { console.warn('No se pudo precargar inventario:', e); }
 }
 
@@ -234,7 +235,7 @@ let historialData = [];
 async function loadHistorial() {
   const loadEl  = document.getElementById('loading-historial');
   const wrapEl  = document.getElementById('wrap-historial');
-  loadEl.style.display = 'block'; loadEl.textContent = 'Cargando...';
+  loadEl.style.display = 'block'; loadEl.textContent = '⏳ Cargando historial...';
   wrapEl.style.display = 'none';
   try {
     const filas = await fetchSheet(VENTAS_SHEET);
@@ -286,10 +287,60 @@ function irABuscar(nro) {
 }
 
 // ── Inventario ───────────────────────────────────────────────────
-async function loadInventario() {
+// ── Filtro inventario ────────────────────────────────────────────
+let inventarioFiltro = 'todos';
+let inventarioCache  = null;
+
+function filtrarInventario(filtro, btn) {
+  inventarioFiltro = filtro;
+  document.querySelectorAll('.inv-fbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (inventarioCache) renderInventario(inventarioCache);
+}
+
+function renderInventario(data) {
+  const tbodyEl = document.getElementById('tbody-inventario');
+  const filtrado = data.filter(p => {
+    if (inventarioFiltro === 'todos') return true;
+    if (inventarioFiltro === 'sin')   return p.stock === 0;
+    if (inventarioFiltro === 'bajo')  return p.stock > 0 && p.stock <= 3;
+    if (inventarioFiltro === 'medio') return p.stock > 3 && p.stock <= 8;
+    if (inventarioFiltro === 'ok')    return p.stock > 8;
+    return true;
+  });
+  if (!filtrado.length) {
+    tbodyEl.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px">Sin productos con ese estado.</td></tr>`;
+    return;
+  }
+  tbodyEl.innerHTML = filtrado.map(p => `
+    <tr>
+      <td style="font-family:monospace;font-size:12px">${p.codigo}</td>
+      <td>${p.desc}</td>
+      <td class="right" style="font-weight:600;color:${p.stock===0?'#dc2626':p.stock<=3?'#d97706':'inherit'}">${p.stock}</td>
+      <td class="right">$${p.precio.toLocaleString('es-AR')}</td>
+      <td class="center">${p.stock === 0
+        ? '<span class="badge b-sin">SIN STOCK</span>'
+        : p.stock <= 3
+          ? '<span class="badge b-low">STOCK BAJO</span>'
+          : p.stock <= 8
+            ? '<span class="badge b-cig">STOCK MEDIO</span>'
+            : '<span class="badge b-ok">OK</span>'}</td>
+      <td class="center">
+        <button class="btn-edit-prod" onclick="openEditProd('${p.codigo}')">✏ Editar</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function loadInventario(forceRefresh = false) {
   const loadEl  = document.getElementById('loading-inventario');
   const wrapEl  = document.getElementById('wrap-inventario');
-  const tbodyEl = document.getElementById('tbody-inventario');
+  // Si hay caché y no se fuerza recarga, renderizar directo
+  if (inventarioCache && !forceRefresh) {
+    renderInventario(inventarioCache);
+    wrapEl.style.display = 'block';
+    loadEl.style.display = 'none';
+    return;
+  }
   loadEl.style.display = 'block'; loadEl.textContent = 'Cargando...';
   wrapEl.style.display = 'none';
   try {
@@ -300,31 +351,21 @@ async function loadInventario() {
       codigo: String(r[0]||'').trim(), desc: String(r[1]||'').trim(),
       stock: parseFloat(r[2]||0), precio: parseFloat(r[3]||0) || 100
     }));
-    const total_items = inventarioDB.length;
-    const bajo  = inventarioDB.filter(p => p.stock <= 3).length;
+    inventarioCache = inventarioDB;
+    const bajo  = inventarioDB.filter(p => p.stock === 0 || p.stock <= 3).length;
     const medio = inventarioDB.filter(p => p.stock > 3 && p.stock <= 8).length;
     const ok    = inventarioDB.filter(p => p.stock > 8).length;
     const statsEl = document.getElementById('inv-stats');
     if (statsEl) statsEl.innerHTML = `
-      <div class="inv-stat inv-stat-total"><div class="inv-stat-n">${total_items}</div><div class="inv-stat-l">productos</div></div>
-      <div class="inv-stat inv-stat-ok"><div class="inv-stat-n">${ok}</div><div class="inv-stat-l">stock OK</div></div>
-      <div class="inv-stat inv-stat-medio"><div class="inv-stat-n">${medio}</div><div class="inv-stat-l">stock medio</div></div>
-      <div class="inv-stat inv-stat-bajo"><div class="inv-stat-n">${bajo}</div><div class="inv-stat-l">stock bajo</div></div>`;
-    tbodyEl.innerHTML = inventarioDB.map(p => `
-      <tr>
-        <td style="font-family:monospace;font-size:12px">${p.codigo}</td>
-        <td>${p.desc}</td>
-        <td class="right" style="font-weight:600">${p.stock}</td>
-        <td class="right">$${p.precio.toLocaleString('es-AR')}</td>
-        <td class="center">${p.stock <= 3
-          ? '<span class="badge b-low">STOCK BAJO</span>'
-          : p.stock <= 8
-            ? '<span class="badge b-cig">STOCK MEDIO</span>'
-            : '<span class="badge b-ok">OK</span>'}</td>
-        <td class="center">
-          <button class="btn-edit-prod" onclick="openEditProd('${p.codigo}')">✏ Editar</button>
-        </td>
-      </tr>`).join('');
+      <div class="inv-stat inv-stat-total" onclick="filtrarInventario('todos',document.querySelector('.inv-fbtn'))" style="cursor:pointer">
+        <div class="inv-stat-n">${inventarioDB.length}</div><div class="inv-stat-l">productos</div></div>
+      <div class="inv-stat inv-stat-ok" onclick="filtrarInventario('ok',document.querySelectorAll('.inv-fbtn')[1])" style="cursor:pointer">
+        <div class="inv-stat-n">${ok}</div><div class="inv-stat-l">stock OK</div></div>
+      <div class="inv-stat inv-stat-medio" onclick="filtrarInventario('medio',document.querySelectorAll('.inv-fbtn')[2])" style="cursor:pointer">
+        <div class="inv-stat-n">${medio}</div><div class="inv-stat-l">stock medio</div></div>
+      <div class="inv-stat inv-stat-bajo" onclick="filtrarInventario('bajo',document.querySelectorAll('.inv-fbtn')[3])" style="cursor:pointer">
+        <div class="inv-stat-n">${bajo}</div><div class="inv-stat-l">stock bajo/sin</div></div>`;
+    renderInventario(inventarioDB);
     loadEl.style.display = 'none'; wrapEl.style.display = 'block';
   } catch(e) { loadEl.textContent = 'Error al cargar inventario.'; }
 }
@@ -387,7 +428,7 @@ async function guardarAddProd() {
     const res = await callScript({ action: 'addProducto', codigo, descripcion, stock, precio });
     if (res.status === 'ok') {
       document.getElementById('modal-add-prod').classList.remove('open');
-      await loadInventario(); await preloadInventario();
+      inventarioCache = null; await loadInventario(true); await preloadInventario();
     } else { errEl.textContent = res.message || 'Error al guardar.'; }
   } catch(e) { errEl.textContent = 'Error de conexión.'; }
   btn.disabled = false; btn.textContent = 'Agregar';
@@ -773,27 +814,7 @@ function updatePreview() {
   }
 }
 function initFondo() {
-  const input = document.getElementById('img-input');
-  if (input) {
-    input.addEventListener('change', function() {
-      if (!this.files || !this.files[0]) return;
-      const file = this.files[0]; const fileName = file.name;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        fondoImagenDataURL = e.target.result;
-        localStorage.removeItem('fondo-gradient');
-        applyFondoToSection(); updatePreview(); renderGradientesGrid();
-        const area = document.getElementById('upload-area');
-        if (area) {
-          area.querySelector('.upload-text').textContent = '✓ ' + fileName;
-          area.querySelector('.upload-hint').textContent = 'Clic para cambiar la imagen';
-          area.style.borderColor = '#059669'; area.style.background = '#f0fdf4';
-        }
-        input.value = '';
-      };
-      reader.readAsDataURL(file);
-    });
-  }
+  // Sin carga de imagen (opción eliminada)
   applyFondoToSection(); updatePreview();
 }
 

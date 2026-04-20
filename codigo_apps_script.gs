@@ -5,16 +5,19 @@ function doPost(e) {
 
     // ── Registrar ventas con número de ticket ────────────────────
     if (data.action === 'addVentas') {
-      const sheet = ss.getSheetByName('Respuestas formulario');
+      const sheet     = ss.getSheetByName('Respuestas formulario');
       const nroTicket = generarNroTicket(sheet, data.ventas[0].responsable);
+      const inv       = ss.getSheetByName('Inventario');
+      // Leer inventario una sola vez para eficiencia
+      let invDatos = inv.getDataRange().getValues();
       data.ventas.forEach(v => {
         // Columnas: fecha | codigo | descripcion | precio | cantidad | formaPago | turno | responsable | nroTicket
         sheet.appendRow([v.fecha, v.codigo, v.descripcion, v.precio, v.cantidad, v.formaPago, v.turno, v.responsable, nroTicket]);
-        const inv   = ss.getSheetByName('Inventario');
-        const datos = inv.getDataRange().getValues();
-        for (let i = 2; i < datos.length; i++) {
-          if (String(datos[i][0]).trim() === String(v.codigo).trim()) {
-            inv.getRange(i + 1, 3).setValue(Math.max(0, (parseFloat(datos[i][2]) || 0) - v.cantidad));
+        for (let i = 2; i < invDatos.length; i++) {
+          if (String(invDatos[i][0]).trim() === String(v.codigo).trim()) {
+            const nuevoStock = Math.max(0, (parseFloat(invDatos[i][2]) || 0) - v.cantidad);
+            inv.getRange(i + 1, 3).setValue(nuevoStock);
+            invDatos[i][2] = nuevoStock; // actualizar en memoria para siguiente iteración
             break;
           }
         }
@@ -235,14 +238,18 @@ function doPost(e) {
   }
 }
 
-// ── Genera número de ticket: XX-NNN (iniciales responsable + correlativo global) ──
+// ── Genera número de ticket: XX-NNN (correlativo global único) ──
 function generarNroTicket(sheet, responsable) {
   const iniciales = String(responsable || 'XX').trim().substring(0, 2).toUpperCase();
   const filas     = sheet.getDataRange().getValues();
-  // Contar tickets únicos globales (columna 8 = nroTicket)
-  const ticketsExistentes = new Set(filas.slice(1).map(r => r[8]).filter(v => v));
-  const nro = String(ticketsExistentes.size + 1).padStart(3, '0');
-  return `${iniciales}-${nro}`;
+  // Extraer el número más alto de todos los tickets (parte numérica tras el guión)
+  const nums = filas.slice(1)
+    .map(function(r) { return String(r[8] || ''); })
+    .filter(function(v) { return v.indexOf('-') !== -1; })
+    .map(function(v) { return parseInt(v.split('-').pop(), 10); })
+    .filter(function(n) { return !isNaN(n) && n > 0; });
+  const maxNro = nums.length > 0 ? Math.max.apply(null, nums) : 0;
+  return iniciales + '-' + String(maxNro + 1).padStart(3, '0');
 }
 
 function doGet(e) {
