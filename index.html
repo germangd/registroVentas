@@ -9,239 +9,243 @@
 </head>
 <body>
 
-  <header>
-    <div class="header-inner">
-      <div class="header-title">
-        <div class="logo-dot"></div>
+  <!-- ── LOGIN ──────────────────────────────────────── -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-box">
+      <div class="login-logo">
+        <div class="login-dot"></div>
         <span>Registro de ventas</span>
       </div>
-      <div class="status-dot" id="status-dot" title="Conectado"></div>
+      <div class="login-title">Iniciar sesión</div>
+      <div class="form-group">
+        <label>Usuario</label>
+        <input type="text" id="login-user" placeholder="Tu usuario" autocomplete="username">
+      </div>
+      <div class="form-group" style="margin-top:12px">
+        <label>Contraseña</label>
+        <input type="password" id="login-pass" placeholder="••••••" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter') doLogin()">
+      </div>
+      <div class="login-error" id="login-error"></div>
+      <button class="btn-primary" id="btn-login" onclick="doLogin()" style="margin-top:20px">
+        Ingresar
+      </button>
     </div>
-  </header>
+  </div>
 
-  <nav class="tabs">
-    <button class="tab active" onclick="showTab('nueva', this)">Nueva venta</button>
-    <button class="tab" onclick="showTab('historial', this)">Historial</button>
-    <button class="tab" onclick="showTab('inventario', this)">Inventario</button>
-    <button class="tab" onclick="showTab('resumen', this)">Resumen</button>
-    <button class="tab tab-config" onclick="showTab('config', this)">⚙ Config</button>
-  </nav>
+  <!-- ── APP ────────────────────────────────────────── -->
+  <div id="app-screen" style="display:none">
 
-  <main id="main-content">
-
-    <!-- ── NUEVA VENTA ─────────────────────────────── -->
-    <section id="tab-nueva" class="section active">
-      <div class="card card-venta">
-        <div class="card-title-row">
-          <span class="card-icon">🧾</span>
-          <div class="card-title">Productos de la venta</div>
+    <header>
+      <div class="header-inner">
+        <div class="header-title">
+          <div class="logo-dot"></div>
+          <span>Registro de ventas</span>
         </div>
-        <p class="hint">Completá cada fila. Presioná Enter o Tab en cantidad para agregar otra.</p>
-
-        <div class="grid-wrap">
-          <div class="grid-head">
-            <span>Código</span>
-            <span>Descripción</span>
-            <span>Precio</span>
-            <span>Cantidad</span>
-            <span class="right">Subtotal</span>
-            <span></span>
-          </div>
-          <div id="grid-body"></div>
-          <div class="total-bar">
-            <span class="total-label">Total:</span>
-            <strong id="total-valor">$0</strong>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-        <div class="section-label">Datos de la venta</div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label>💳 Forma de pago</label>
-            <select id="pago">
-              <option value="">Seleccionar...</option>
-              <option>EFECTIVO</option>
-              <option>TRANSFERENCIA</option>
-              <option>CIGARRILLOS EFECT.</option>
-              <option>CIGARRILLOS MP</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>🕐 Turno</label>
-            <select id="turno">
-              <option value="">Seleccionar...</option>
-              <option>MAÑANA</option>
-              <option>TARDE</option>
-              <option>NOCHE</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>👤 Responsable</label>
-            <select id="responsable">
-              <option value="">Seleccionar...</option>
-              <option>CLEVER</option>
-              <option>BELEN</option>
-              <option>IRIS</option>
-            </select>
-          </div>
-        </div>
-        <button class="btn-primary" id="btn-guardar" onclick="guardarVenta()">
-          ✓ &nbsp;Registrar venta
-        </button>
-        <div class="success-msg" id="success-msg">¡Venta registrada correctamente!</div>
-        <div class="error-msg" id="error-msg"></div>
-      </div>
-    </section>
-
-    <!-- ── HISTORIAL ───────────────────────────────── -->
-    <section id="tab-historial" class="section">
-      <div class="section-hero hero-historial">
-        <div class="hero-icon">📋</div>
-        <div class="hero-text">Historial de ventas</div>
-      </div>
-      <div class="card">
-        <div class="loading" id="loading-historial">Cargando...</div>
-        <div class="table-wrap" id="wrap-historial" style="display:none">
-          <table>
-            <thead><tr>
-              <th>Fecha</th><th>Código</th><th>Descripción</th>
-              <th>Precio</th><th>Cant.</th><th>Subtotal</th>
-              <th>Turno</th><th>Responsable</th><th>Pago</th>
-            </tr></thead>
-            <tbody id="tbody-historial"></tbody>
-          </table>
+        <div class="header-right">
+          <span class="user-badge" id="user-badge"></span>
+          <button class="btn-logout" onclick="doLogout()">Salir</button>
+          <div class="status-dot" id="status-dot" title="Conectado"></div>
         </div>
       </div>
-    </section>
+    </header>
 
-    <!-- ── INVENTARIO ──────────────────────────────── -->
-    <section id="tab-inventario" class="section">
-      <div class="section-hero hero-inventario">
-        <div class="hero-icon">📦</div>
-        <div class="hero-text">Inventario actual</div>
-      </div>
-      <div class="inv-stats" id="inv-stats"></div>
-      <div class="card">
-        <div class="loading" id="loading-inventario">Cargando...</div>
-        <div class="table-wrap" id="wrap-inventario" style="display:none">
-          <table>
-            <thead><tr>
-              <th>Código</th><th>Descripción</th>
-              <th class="right">Stock</th><th class="center">Estado</th>
-            </tr></thead>
-            <tbody id="tbody-inventario"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
+    <nav class="tabs" id="nav-tabs">
+      <button class="tab active" id="tab-btn-nueva"      onclick="showTab('nueva', this)">Nueva venta</button>
+      <button class="tab"        id="tab-btn-historial"  onclick="showTab('historial', this)">Historial</button>
+      <button class="tab admin-only" id="tab-btn-inventario" onclick="showTab('inventario', this)">Inventario</button>
+      <button class="tab admin-only" id="tab-btn-resumen"    onclick="showTab('resumen', this)">Resumen</button>
+      <button class="tab admin-only tab-config" id="tab-btn-config" onclick="showTab('config', this)">⚙ Config</button>
+    </nav>
 
-    <!-- ── RESUMEN ─────────────────────────────────── -->
-    <section id="tab-resumen" class="section">
+    <main id="main-content">
 
-      <div class="section-hero hero-resumen">
-        <div class="hero-icon">📊</div>
-        <div class="hero-text">Resumen de ventas</div>
-      </div>
-
-      <div class="card resumen-filtros">
-        <div class="filtro-rapido">
-          <button class="fbtn active" onclick="setFiltroRapido('hoy',this)">Hoy</button>
-          <button class="fbtn" onclick="setFiltroRapido('semana',this)">Esta semana</button>
-          <button class="fbtn" onclick="setFiltroRapido('mes',this)">Este mes</button>
-          <button class="fbtn" onclick="setFiltroRapido('todo',this)">Todo</button>
-        </div>
-        <div class="filtro-rango">
-          <label>Desde</label>
-          <input type="date" id="fecha-desde" onchange="setFiltroRango()">
-          <label>Hasta</label>
-          <input type="date" id="fecha-hasta" onchange="setFiltroRango()">
-        </div>
-      </div>
-
-      <div class="metrics" id="metrics">
-        <div class="metric"><div class="metric-icon">💰</div><div class="metric-label">Total período</div><div class="metric-value" id="m-total">—</div></div>
-        <div class="metric"><div class="metric-icon">🔁</div><div class="metric-label">Transacciones</div><div class="metric-value" id="m-trans">—</div></div>
-        <div class="metric"><div class="metric-icon">📅</div><div class="metric-label">Días con ventas</div><div class="metric-value" id="m-dias">—</div></div>
-        <div class="metric"><div class="metric-icon">🎯</div><div class="metric-label">Ticket promedio</div><div class="metric-value" id="m-ticket">—</div></div>
-      </div>
-
-      <div class="loading" id="loading-resumen" style="display:none">Cargando...</div>
-
-      <div class="card" id="card-resp">
-        <div class="card-title-row"><span class="card-icon">👤</span><div class="card-title">Por responsable</div></div>
-        <div id="grupos-resp"></div>
-      </div>
-
-      <div class="card" style="margin-top:1rem" id="card-pago">
-        <div class="card-title-row"><span class="card-icon">💳</span><div class="card-title">Por forma de pago</div></div>
-        <div id="grupos-pago"></div>
-      </div>
-
-      <div class="card" style="margin-top:1rem" id="card-turno">
-        <div class="card-title-row"><span class="card-icon">🕐</span><div class="card-title">Por turno</div></div>
-        <div id="grupos-turno"></div>
-      </div>
-
-      <div class="card" style="margin-top:1rem">
-        <div class="card-title-row"><span class="card-icon">🍩</span><div class="card-title">Distribución de ventas</div></div>
-        <div class="charts-row">
-          <div class="chart-col">
-            <div class="chart-label">Responsable</div>
-            <div class="chart-wrap"><canvas id="chart-resp"></canvas></div>
+      <!-- ── NUEVA VENTA ────────────────────────────── -->
+      <section id="tab-nueva" class="section active">
+        <div class="card card-venta">
+          <div class="card-title-row">
+            <span class="card-icon">🧾</span>
+            <div class="card-title">Productos de la venta</div>
           </div>
-          <div class="chart-col">
-            <div class="chart-label">Forma de pago</div>
-            <div class="chart-wrap"><canvas id="chart-pago"></canvas></div>
+          <p class="hint">Completá cada fila. Presioná Enter o Tab en cantidad para agregar otra.</p>
+          <div class="grid-wrap">
+            <div class="grid-head">
+              <span>Código</span><span>Descripción</span><span>Precio</span>
+              <span>Cantidad</span><span class="right">Subtotal</span><span></span>
+            </div>
+            <div id="grid-body"></div>
+            <div class="total-bar">
+              <span class="total-label">Total:</span>
+              <strong id="total-valor">$0</strong>
+            </div>
           </div>
-          <div class="chart-col">
-            <div class="chart-label">Turno</div>
-            <div class="chart-wrap"><canvas id="chart-turno"></canvas></div>
+          <div class="divider"></div>
+          <div class="section-label">Datos de la venta</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>💳 Forma de pago</label>
+              <select id="pago">
+                <option value="">Seleccionar...</option>
+                <option>EFECTIVO</option><option>TRANSFERENCIA</option>
+                <option>CIGARRILLOS EFECT.</option><option>CIGARRILLOS MP</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>🕐 Turno</label>
+              <select id="turno">
+                <option value="">Seleccionar...</option>
+                <option>MAÑANA</option><option>TARDE</option><option>NOCHE</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>👤 Responsable</label>
+              <select id="responsable">
+                <option value="">Seleccionar...</option>
+                <option>CLEVER</option><option>BELEN</option><option>IRIS</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn-primary" id="btn-guardar" onclick="guardarVenta()">✓ &nbsp;Registrar venta</button>
+          <div class="success-msg" id="success-msg">¡Venta registrada correctamente!</div>
+          <div class="error-msg"   id="error-msg"></div>
+        </div>
+      </section>
+
+      <!-- ── HISTORIAL ──────────────────────────────── -->
+      <section id="tab-historial" class="section">
+        <div class="section-hero hero-historial">
+          <div class="hero-icon">📋</div><div class="hero-text">Historial de ventas</div>
+        </div>
+        <div class="card">
+          <div class="loading" id="loading-historial">Cargando...</div>
+          <div class="table-wrap" id="wrap-historial" style="display:none">
+            <table>
+              <thead><tr>
+                <th>Fecha</th><th>Código</th><th>Descripción</th>
+                <th>Precio</th><th>Cant.</th><th>Subtotal</th>
+                <th>Turno</th><th>Responsable</th><th>Pago</th>
+              </tr></thead>
+              <tbody id="tbody-historial"></tbody>
+            </table>
           </div>
         </div>
-      </div>
+      </section>
 
-    </section>
-
-    <!-- ── CONFIGURACIÓN ───────────────────────────── -->
-    <section id="tab-config" class="section">
-
-      <div class="section-hero hero-config">
-        <div class="hero-icon">⚙️</div>
-        <div class="hero-text">Configuración</div>
-      </div>
-
-      <div class="card">
-        <div class="card-title-row"><span class="card-icon">🎨</span><div class="card-title">Fondo de Nueva Venta</div></div>
-        <p class="hint">Elegí un gradiente o subí tu propia imagen. Se guarda automáticamente.</p>
-
-        <div class="config-section-label">Gradientes</div>
-        <div class="gradientes-grid" id="gradientes-grid"></div>
-
-        <div class="divider"></div>
-        <div class="config-section-label">Imagen personalizada</div>
-        <label class="upload-area" id="upload-area" for="img-input">
-          <div class="upload-icon">🖼</div>
-          <div class="upload-text">Hacé clic para subir una foto</div>
-          <div class="upload-hint">JPG, PNG, WEBP — se guarda en tu navegador</div>
-        </label>
-        <input type="file" id="img-input" accept="image/*" style="display:none">
-
-        <div class="divider"></div>
-        <div class="config-section-label">Vista previa</div>
-        <div class="fondo-preview" id="fondo-preview">
-          <div class="preview-card">
-            <div style="font-weight:700;margin-bottom:6px">Productos de la venta</div>
-            <div style="font-size:12px;color:#6b7280">Así se verá el fondo en Nueva Venta</div>
+      <!-- ── INVENTARIO (admin) ─────────────────────── -->
+      <section id="tab-inventario" class="section">
+        <div class="section-hero hero-inventario">
+          <div class="hero-icon">📦</div><div class="hero-text">Inventario actual</div>
+          <button class="btn-add-prod" onclick="openAddProducto()">+ Agregar producto</button>
+        </div>
+        <div class="inv-stats" id="inv-stats"></div>
+        <div class="card">
+          <div class="loading" id="loading-inventario">Cargando...</div>
+          <div class="table-wrap" id="wrap-inventario" style="display:none">
+            <table>
+              <thead><tr>
+                <th>Código</th><th>Descripción</th>
+                <th class="right">Stock</th><th class="right">Precio</th><th class="center">Estado</th><th class="center">Editar</th>
+              </tr></thead>
+              <tbody id="tbody-inventario"></tbody>
+            </table>
           </div>
         </div>
+      </section>
 
-        <button class="btn-reset" onclick="resetFondo()">↺ Quitar fondo personalizado</button>
-      </div>
+      <!-- ── RESUMEN ────────────────────────────────── -->
+      <section id="tab-resumen" class="section">
+        <div class="section-hero hero-resumen">
+          <div class="hero-icon">📊</div><div class="hero-text">Resumen de ventas</div>
+        </div>
+        <div class="card resumen-filtros">
+          <div class="filtro-rapido">
+            <button class="fbtn active" onclick="setFiltroRapido('hoy',this)">Hoy</button>
+            <button class="fbtn" onclick="setFiltroRapido('semana',this)">Esta semana</button>
+            <button class="fbtn" onclick="setFiltroRapido('mes',this)">Este mes</button>
+            <button class="fbtn" onclick="setFiltroRapido('todo',this)">Todo</button>
+          </div>
+          <div class="filtro-rango">
+            <label>Desde</label><input type="date" id="fecha-desde" onchange="setFiltroRango()">
+            <label>Hasta</label><input type="date" id="fecha-hasta" onchange="setFiltroRango()">
+          </div>
+        </div>
+        <div class="metrics" id="metrics">
+          <div class="metric"><div class="metric-icon">💰</div><div class="metric-label">Total período</div><div class="metric-value" id="m-total">—</div></div>
+          <div class="metric"><div class="metric-icon">🔁</div><div class="metric-label">Transacciones</div><div class="metric-value" id="m-trans">—</div></div>
+          <div class="metric"><div class="metric-icon">📅</div><div class="metric-label">Días con ventas</div><div class="metric-value" id="m-dias">—</div></div>
+          <div class="metric"><div class="metric-icon">🎯</div><div class="metric-label">Ticket promedio</div><div class="metric-value" id="m-ticket">—</div></div>
+        </div>
+        <div class="loading" id="loading-resumen" style="display:none">Cargando...</div>
+        <div class="card" id="card-resp">
+          <div class="card-title-row"><span class="card-icon">👤</span><div class="card-title">Por responsable</div></div>
+          <div id="grupos-resp"></div>
+        </div>
+        <div class="card" style="margin-top:1rem" id="card-pago">
+          <div class="card-title-row"><span class="card-icon">💳</span><div class="card-title">Por forma de pago</div></div>
+          <div id="grupos-pago"></div>
+        </div>
+        <div class="card" style="margin-top:1rem" id="card-turno">
+          <div class="card-title-row"><span class="card-icon">🕐</span><div class="card-title">Por turno</div></div>
+          <div id="grupos-turno"></div>
+        </div>
+        <div class="card" style="margin-top:1rem">
+          <div class="card-title-row"><span class="card-icon">🍩</span><div class="card-title">Distribución de ventas</div></div>
+          <div class="charts-row">
+            <div class="chart-col"><div class="chart-label">Responsable</div><div class="chart-wrap"><canvas id="chart-resp"></canvas></div></div>
+            <div class="chart-col"><div class="chart-label">Forma de pago</div><div class="chart-wrap"><canvas id="chart-pago"></canvas></div></div>
+            <div class="chart-col"><div class="chart-label">Turno</div><div class="chart-wrap"><canvas id="chart-turno"></canvas></div></div>
+          </div>
+        </div>
+      </section>
 
-    </section>
+      <!-- ── CONFIGURACIÓN ──────────────────────────── -->
+      <section id="tab-config" class="section">
+        <div class="section-hero hero-config">
+          <div class="hero-icon">⚙️</div><div class="hero-text">Configuración</div>
+        </div>
 
-  </main>
+        <!-- Fondo -->
+        <div class="card">
+          <div class="card-title-row"><span class="card-icon">🎨</span><div class="card-title">Fondo de Nueva Venta</div></div>
+          <p class="hint">Elegí un gradiente o subí tu propia imagen. Se guarda automáticamente.</p>
+          <div class="config-section-label">Gradientes</div>
+          <div class="gradientes-grid" id="gradientes-grid"></div>
+          <div class="divider"></div>
+          <div class="config-section-label">Imagen personalizada</div>
+          <label class="upload-area" id="upload-area" for="img-input">
+            <div class="upload-icon">🖼</div>
+            <div class="upload-text">Hacé clic para subir una foto</div>
+            <div class="upload-hint">JPG, PNG, WEBP — se guarda en tu navegador</div>
+          </label>
+          <input type="file" id="img-input" accept="image/*" style="display:none">
+          <div class="divider"></div>
+          <div class="config-section-label">Vista previa</div>
+          <div class="fondo-preview" id="fondo-preview">
+            <div class="preview-card">
+              <div style="font-weight:700;margin-bottom:6px">Productos de la venta</div>
+              <div style="font-size:12px;color:#6b7280">Así se verá el fondo en Nueva Venta</div>
+            </div>
+          </div>
+          <button class="btn-reset" onclick="resetFondo()">↺ Quitar fondo personalizado</button>
+        </div>
+
+        <!-- Usuarios -->
+        <div class="card" style="margin-top:1rem">
+          <div class="card-title-row"><span class="card-icon">👥</span><div class="card-title">Gestión de usuarios</div></div>
+          <div class="loading" id="loading-usuarios">Cargando...</div>
+          <div id="wrap-usuarios" style="display:none">
+            <table>
+              <thead><tr><th>Usuario</th><th>Rol</th><th class="center">Acciones</th></tr></thead>
+              <tbody id="tbody-usuarios"></tbody>
+            </table>
+          </div>
+          <button class="btn-add-user" onclick="openAddUsuario()" style="margin-top:14px">+ Agregar usuario</button>
+        </div>
+      </section>
+
+    </main>
+
+  </div><!-- /app-screen -->
 
   <!-- ── MODAL TICKET ───────────────────────────────── -->
   <div class="modal-overlay" id="modal-ticket" onclick="cerrarTicket(event)">
@@ -253,16 +257,94 @@
       </div>
       <div class="ticket-meta" id="ticket-meta"></div>
       <div class="ticket-items-header">
-        <span>Producto</span>
-        <span class="right">Cant.</span>
-        <span class="right">Subtotal</span>
+        <span>Producto</span><span class="right">Cant.</span><span class="right">Subtotal</span>
       </div>
       <div id="ticket-items"></div>
       <div class="ticket-total-bar">
-        <span>TOTAL</span>
-        <span id="ticket-total"></span>
+        <span>TOTAL</span><span id="ticket-total"></span>
       </div>
       <button class="btn-cerrar" onclick="cerrarTicket()">Cerrar y nueva venta</button>
+    </div>
+  </div>
+
+  <!-- ── MODAL EDITAR PRODUCTO ─────────────────────── -->
+  <div class="modal-overlay" id="modal-edit-prod" onclick="cerrarModalProd(event)">
+    <div class="modal-box" style="max-width:360px">
+      <div class="modal-header-edit">
+        <div class="modal-edit-title">Editar producto</div>
+        <div class="modal-edit-sub" id="edit-prod-nombre"></div>
+      </div>
+      <div style="padding:20px">
+        <div class="form-group">
+          <label>Stock actual</label>
+          <input type="number" id="edit-stock" min="0" step="1" style="width:100%;padding:9px 10px;border:1.5px solid #c7d2fe;border-radius:8px;font-size:14px">
+        </div>
+        <div class="form-group" style="margin-top:12px">
+          <label>Precio ($)</label>
+          <input type="number" id="edit-precio" min="0" step="0.01" style="width:100%;padding:9px 10px;border:1.5px solid #c7d2fe;border-radius:8px;font-size:14px">
+        </div>
+        <div class="edit-prod-error" id="edit-prod-error"></div>
+        <div style="display:flex;gap:10px;margin-top:18px">
+          <button class="btn-cancel-edit" onclick="cerrarModalProd()">Cancelar</button>
+          <button class="btn-primary" id="btn-save-prod" onclick="guardarEditProd()" style="flex:1">Guardar cambios</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL AGREGAR PRODUCTO ────────────────────── -->
+  <div class="modal-overlay" id="modal-add-prod" onclick="cerrarModalAddProd(event)">
+    <div class="modal-box" style="max-width:380px">
+      <div class="modal-header-edit">
+        <div class="modal-edit-title">Agregar producto</div>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div class="form-group"><label>Código</label>
+          <input type="text" id="add-codigo" style="width:100%;padding:9px 10px;border:1.5px solid #c7d2fe;border-radius:8px;font-size:14px" placeholder="Ej: 001">
+        </div>
+        <div class="form-group"><label>Descripción</label>
+          <input type="text" id="add-desc" style="width:100%;padding:9px 10px;border:1.5px solid #c7d2fe;border-radius:8px;font-size:14px" placeholder="Nombre del producto">
+        </div>
+        <div class="form-group"><label>Stock inicial</label>
+          <input type="number" id="add-stock" min="0" style="width:100%;padding:9px 10px;border:1.5px solid #c7d2fe;border-radius:8px;font-size:14px" placeholder="0">
+        </div>
+        <div class="form-group"><label>Precio ($)</label>
+          <input type="number" id="add-precio" min="0" style="width:100%;padding:9px 10px;border:1.5px solid #c7d2fe;border-radius:8px;font-size:14px" placeholder="0">
+        </div>
+        <div class="edit-prod-error" id="add-prod-error"></div>
+        <div style="display:flex;gap:10px;margin-top:6px">
+          <button class="btn-cancel-edit" onclick="cerrarModalAddProd()">Cancelar</button>
+          <button class="btn-primary" id="btn-save-add-prod" onclick="guardarAddProd()" style="flex:1">Agregar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL AGREGAR USUARIO ─────────────────────── -->
+  <div class="modal-overlay" id="modal-add-user" onclick="cerrarModalAddUser(event)">
+    <div class="modal-box" style="max-width:360px">
+      <div class="modal-header-edit">
+        <div class="modal-edit-title">Agregar usuario</div>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div class="form-group"><label>Usuario</label>
+          <input type="text" id="new-user-name" style="width:100%;padding:9px 10px;border:1.5px solid #c7d2fe;border-radius:8px;font-size:14px" placeholder="Nombre de usuario">
+        </div>
+        <div class="form-group"><label>Contraseña</label>
+          <input type="password" id="new-user-pass" style="width:100%;padding:9px 10px;border:1.5px solid #c7d2fe;border-radius:8px;font-size:14px" placeholder="Contraseña">
+        </div>
+        <div class="form-group"><label>Rol</label>
+          <select id="new-user-rol" style="width:100%;padding:9px 10px;border:1.5px solid #c7d2fe;border-radius:8px;font-size:14px;background:#fafbff">
+            <option value="vendedor">Vendedor</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+        <div class="edit-prod-error" id="add-user-error"></div>
+        <div style="display:flex;gap:10px;margin-top:6px">
+          <button class="btn-cancel-edit" onclick="cerrarModalAddUser()">Cancelar</button>
+          <button class="btn-primary" id="btn-save-user" onclick="guardarAddUsuario()" style="flex:1">Crear usuario</button>
+        </div>
+      </div>
     </div>
   </div>
 
